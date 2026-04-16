@@ -77,8 +77,8 @@
       z-index: 1;
     }
     .status-dot {
-      width: 48px;
-      height: 48px;
+      width: 44px;
+      height: 44px;
       background: #e2e8f0;
       border-radius: 50%;
       display: flex;
@@ -86,7 +86,7 @@
       justify-content: center;
       margin: 0 auto 8px;
       transition: all 0.3s;
-      font-size: 20px;
+      font-size: 18px;
       color: #94a3b8;
     }
     .status-dot.active {
@@ -529,9 +529,9 @@
     return `
       <div class="min-h-screen bg-gradient-to-b from-orange-50 to-white py-8 px-4">
         <div class="max-w-2xl mx-auto">
-          <!-- Order Status Tracker -->
+          <!-- Order Status Tracker - TOP SECTION -->
           <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
-            <h2 class="text-xl font-bold text-center text-gray-800 mb-6">Order Status</h2>
+            <h2 class="text-xl font-bold text-center text-gray-800 mb-6">Track Your Order</h2>
             <div class="relative">
               <div class="status-tracker-line"></div>
               <div class="relative flex justify-between z-10">
@@ -550,10 +550,13 @@
               <p class="text-sm text-gray-500">
                 <i class="fas fa-clock mr-1"></i> Estimated time: ${currentOrder.estimatedTime || 20} minutes
               </p>
+              <p class="text-xs text-green-600 mt-2">
+                <i class="fas fa-check-circle"></i> Current Status: <span class="font-semibold">${currentOrder.status}</span>
+              </p>
             </div>
           </div>
           
-          <!-- Bill Summary -->
+          <!-- Bill Summary - BOTTOM SECTION -->
           <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div class="p-6">
               <!-- Restaurant Header -->
