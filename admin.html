@@ -29,26 +29,6 @@
     .veg-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .veg-dot.green { background: #22c55e; }
     .veg-dot.red { background: #ef4444; }
-    
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-      .bill-print, .bill-print * {
-        visibility: visible;
-      }
-      .bill-print {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        padding: 20px;
-        background: white;
-      }
-      .no-print {
-        display: none;
-      }
-    }
   </style>
 </head>
 <body>
@@ -660,80 +640,6 @@
     return { subtotal, cgst, sgst, serviceCharge, totalTax, roundOff, grandTotal };
   }
   
-  // ======================== PRINT BILL FUNCTION ========================
-  function printBill(order) {
-    const printWindow = window.open('', '_blank');
-    const orderDate = new Date(order.timestamp).toLocaleString();
-    const orderTime = new Date(order.timestamp).toLocaleTimeString();
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Bill #${order.billNumber}</title>
-        <style>
-          * { font-family: Arial, sans-serif; }
-          body { padding: 20px; }
-          .bill-container { max-width: 400px; margin: 0 auto; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-          .restaurant-name { font-size: 24px; font-weight: bold; margin: 0; }
-          .bill-title { font-size: 18px; margin: 5px 0; }
-          .bill-details { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-          th { background-color: #f5f5f5; }
-          .text-right { text-align: right; }
-          .total-section { border-top: 2px solid #333; margin-top: 10px; padding-top: 10px; }
-          .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
-          .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-          .status-pending { background: #fef3c7; color: #92400e; }
-          .status-accepted { background: #dbeafe; color: #1e40af; }
-          .status-preparing { background: #fed7aa; color: #9a3412; }
-          .status-ready { background: #d1fae5; color: #065f46; }
-          .status-served { background: #dcfce7; color: #166534; }
-          .status-declined { background: #fee2e2; color: #991b1b; }
-        </style>
-      </head>
-      <body>
-        <div class="bill-container">
-          <div class="header">
-            <h1 class="restaurant-name">${order.restaurantName || userRestaurantData?.name || 'QR Dine'}</h1>
-            <p class="bill-title">Digital Restaurant Bill</p>
-          </div>
-          <div class="bill-details">
-            <span><strong>Bill No:</strong> ${order.billNumber}</span>
-            <span><strong>Table:</strong> ${order.tableNumber}</span>
-            <span><strong>Date:</strong> ${orderDate.split(',')[0]}</span>
-          </div>
-          <table>
-            <thead>
-              <tr><th>Item</th><th>Qty</th><th class="text-right">Price</th><th class="text-right">Total</th></tr>
-            </thead>
-            <tbody>
-              ${order.items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${item.quantity}</td><td class="text-right">${formatCurrency(item.price)}</td><td class="text-right">${formatCurrency(item.price * item.quantity)}</td></tr>`).join('')}
-            </tbody>
-          </table>
-          <div class="total-section">
-            <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span>${formatCurrency(order.subtotal)}</span></div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span>CGST (2.5%):</span><span>${formatCurrency(order.cgst)}</span></div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span>SGST (2.5%):</span><span>${formatCurrency(order.sgst)}</span></div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span>Service Charge (5%):</span><span>${formatCurrency(order.serviceCharge)}</span></div>
-            ${order.roundOff !== 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px;"><span>Round Off:</span><span>${order.roundOff > 0 ? '+' : ''}${formatCurrency(order.roundOff)}</span></div>` : ''}
-            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;"><span>Grand Total:</span><span>${formatCurrency(order.totalPrice)}</span></div>
-          </div>
-          <div class="footer">
-            <p>Thank you for dining with us!</p>
-            <p>Order Status: <span class="status status-${order.status.toLowerCase()}">${order.status}</span></p>
-            <p>** This is a computer generated bill **</p>
-          </div>
-        </div>
-        <script>window.print();setTimeout(function(){window.close();}, 1000);<\/script>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-  }
-  
   // ======================== UI FUNCTIONS ========================
   function handleFileSelect(event) {
     const file = event.target.files[0];
@@ -890,7 +796,6 @@
                     ${order.status === 'Accepted' ? `<button class="prepareOrderBtn bg-purple-500 text-white px-3 py-1 rounded text-xs hover:bg-purple-600" data-id="${order.id}">Prepare</button>` : ''}
                     ${order.status === 'Preparing' ? `<button class="readyOrderBtn bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600" data-id="${order.id}">Mark Ready</button>` : ''}
                     ${order.status === 'Ready' ? `<button class="serveOrderBtn bg-emerald-500 text-white px-3 py-1 rounded text-xs hover:bg-emerald-600" data-id="${order.id}">Serve</button>` : ''}
-                    ${order.status !== 'Declined' && order.status !== 'Served' ? `<button class="printOrderBtn bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600" data-order='${JSON.stringify(order)}'><i class="fas fa-print"></i> Print</button>` : ''}
                   </div>
                 </div>
               `).join('')}
@@ -1010,9 +915,6 @@
                 ` : ''}
                 ${order.status === 'Ready' ? `
                   <button class="serveOrderBtn bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition" data-id="${order.id}"><i class="fas fa-check-double mr-1"></i> Serve Order</button>
-                ` : ''}
-                ${order.status !== 'Declined' && order.status !== 'Served' ? `
-                  <button class="printOrderBtn bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition" data-order='${JSON.stringify(order)}'><i class="fas fa-print mr-1"></i> Print Bill</button>
                 ` : ''}
                 ${order.status === 'Declined' ? `
                   <button class="deleteOrderBtn bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition" data-id="${order.id}"><i class="fas fa-trash mr-1"></i> Remove</button>
@@ -1226,13 +1128,6 @@
             showNotification('Error deleting order', 'error');
           }
         }
-      });
-    });
-    
-    document.querySelectorAll('.printOrderBtn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const order = JSON.parse(btn.dataset.order);
-        printBill(order);
       });
     });
     
