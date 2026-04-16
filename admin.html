@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>QR Dine | Multi-Restaurant Admin Portal - Print & Decline Orders</title>
+  <title>QR Dine | Multi-Restaurant Admin Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
@@ -29,13 +29,6 @@
     .veg-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .veg-dot.green { background: #22c55e; }
     .veg-dot.red { background: #ef4444; }
-    @media print {
-      .no-print { display: none !important; }
-      .print-invoice { display: block; }
-      body * { visibility: hidden; }
-      .print-invoice, .print-invoice * { visibility: visible; }
-      .print-invoice { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; }
-    }
   </style>
 </head>
 <body>
@@ -109,8 +102,30 @@
   let compressProgress = 0;
   let showTaxModal = false;
   
-  // New fields for veg/non-veg selection
-  let selectedVegStatus = true; // true = Veg, false = Non-Veg
+  // Bill counter - starts from 0001 (same as customer portal)
+  let billCounter = 1;
+  
+  function loadBillCounter() {
+    const saved = localStorage.getItem('admin_bill_counter');
+    if (saved) {
+      billCounter = parseInt(saved);
+    } else {
+      billCounter = 1;
+    }
+  }
+  
+  function saveBillCounter() {
+    localStorage.setItem('admin_bill_counter', billCounter);
+  }
+  
+  function getNextBillNumber() {
+    const billNum = billCounter;
+    billCounter++;
+    saveBillCounter();
+    return String(billNum).padStart(4, '0');
+  }
+  
+  let selectedVegStatus = true;
   
   const categories = ['Starters', 'Main Course', 'Breads', 'Beverages', 'Desserts', 'Soups', 'Salads', 'Seafood', 'Tandoor', 'Rolls', 'Combo Meals'];
   
@@ -142,123 +157,6 @@
       if (m === '>') return '&gt;';
       return m;
     });
-  }
-  
-  // ======================== PRINT ORDER FUNCTION (BILLING) ========================
-  function printOrderBill(order) {
-    const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const cgst = order.cgst || (subtotal * (TAX_CONFIG.cgst.enabled ? TAX_CONFIG.cgst.rate : 0) / 100);
-    const sgst = order.sgst || (subtotal * (TAX_CONFIG.sgst.enabled ? TAX_CONFIG.sgst.rate : 0) / 100);
-    const serviceCharge = order.serviceCharge || (subtotal * (TAX_CONFIG.serviceCharge.enabled ? TAX_CONFIG.serviceCharge.rate : 0) / 100);
-    const totalTax = cgst + sgst + serviceCharge;
-    let grandTotal = order.totalPrice || (subtotal + totalTax);
-    let roundOff = 0;
-    
-    if (TAX_CONFIG.roundOff) {
-      const rounded = Math.round(grandTotal);
-      roundOff = rounded - grandTotal;
-      grandTotal = rounded;
-    }
-    
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Invoice - Order #${order.id.slice(-8)}</title>
-        <style>
-          body { font-family: 'Inter', sans-serif; padding: 30px; max-width: 400px; margin: 0 auto; }
-          .invoice-header { text-align: center; border-bottom: 2px solid #f97316; padding-bottom: 15px; margin-bottom: 20px; }
-          .restaurant-name { font-size: 24px; font-weight: bold; color: #ea580c; }
-          .invoice-title { font-size: 18px; font-weight: bold; margin: 10px 0; }
-          .order-details { margin: 20px 0; }
-          .order-details p { margin: 5px 0; }
-          table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-          .totals { margin-top: 20px; border-top: 2px solid #ddd; padding-top: 10px; }
-          .grand-total { font-size: 20px; font-weight: bold; color: #ea580c; text-align: right; }
-          .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
-          @media print {
-            body { padding: 0; margin: 0; }
-            .no-print { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="invoice-header">
-          <div class="restaurant-name">${escapeHtml(userRestaurantData?.name || 'QR Dine Restaurant')}</div>
-          <div class="invoice-title">TAX INVOICE</div>
-          <p>${escapeHtml(userRestaurantData?.address || '')}</p>
-          <p>Phone: ${escapeHtml(userRestaurantData?.phone || '')}</p>
-        </div>
-        
-        <div class="order-details">
-          <p><strong>Order #:</strong> ${order.id.slice(-8)}</p>
-          <p><strong>Table Number:</strong> ${order.tableNumber || 'Dine In'}</p>
-          <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-        </div>
-        
-        <table>
-          <thead>
-            <tr><th>Item</th><th>Qty</th><th>Price</th><th>Amount</th></tr>
-          </thead>
-          <tbody>
-            ${order.items.map(item => `
-              <tr>
-                <td>${escapeHtml(item.name)} ${!item.veg ? '🍗' : '🥬'}</td>
-                <td>${item.quantity}</td>
-                <td>${formatCurrency(item.price)}</td>
-                <td>${formatCurrency(item.price * item.quantity)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        <div class="totals">
-          <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span>${formatCurrency(subtotal)}</span></div>
-          ${TAX_CONFIG.cgst.enabled ? `<div style="display: flex; justify-content: space-between;"><span>CGST (${TAX_CONFIG.cgst.rate}%):</span><span>${formatCurrency(cgst)}</span></div>` : ''}
-          ${TAX_CONFIG.sgst.enabled ? `<div style="display: flex; justify-content: space-between;"><span>SGST (${TAX_CONFIG.sgst.rate}%):</span><span>${formatCurrency(sgst)}</span></div>` : ''}
-          ${TAX_CONFIG.serviceCharge.enabled ? `<div style="display: flex; justify-content: space-between;"><span>Service Charge (${TAX_CONFIG.serviceCharge.rate}%):</span><span>${formatCurrency(serviceCharge)}</span></div>` : ''}
-          ${roundOff !== 0 ? `<div style="display: flex; justify-content: space-between;"><span>Round Off:</span><span>${formatCurrency(roundOff)}</span></div>` : ''}
-          <div class="grand-total" style="display: flex; justify-content: space-between; margin-top: 10px;"><span>GRAND TOTAL:</span><span>${formatCurrency(grandTotal)}</span></div>
-        </div>
-        
-        <div class="footer">
-          <p>Thank you for dining with us!</p>
-          <p>** This is a computer generated invoice **</p>
-        </div>
-        
-        <script>
-          window.onload = function() {
-            window.print();
-            setTimeout(function() { window.close(); }, 1000);
-          };
-        <\/script>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-  }
-  
-  // ======================== DECLINE ORDER FUNCTION ========================
-  async function declineOrder(orderId, order) {
-    if (!confirm(`⚠️ Are you sure you want to DECLINE order #${orderId.slice(-8)}?\n\nThe customer will be notified and the order will be cancelled.`)) {
-      return;
-    }
-    
-    try {
-      await updateDoc(doc(db, "orders", orderId), {
-        status: 'Declined',
-        declinedReason: 'Restaurant declined the order',
-        declinedBy: currentUser?.email,
-        declinedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-      showNotification(`❌ Order #${orderId.slice(-8)} has been declined.`, 'warning');
-    } catch (error) {
-      console.error("Error declining order:", error);
-      showNotification("Error declining order: " + error.message, 'error');
-    }
   }
   
   // ======================== IMAGE COMPRESSION ========================
@@ -433,6 +331,7 @@
         orders.push({ 
           id: doc.id,
           tableNumber: data.tableNumber,
+          billNumber: data.billNumber || '0001',
           items: data.items || [],
           subtotal: data.subtotal,
           cgst: data.cgst,
@@ -712,12 +611,11 @@
     const pendingOrders = orders.filter(o => o.status === 'Pending').length;
     const preparingOrders = orders.filter(o => o.status === 'Preparing').length;
     const servedOrders = orders.filter(o => o.status === 'Served').length;
-    const declinedOrders = orders.filter(o => o.status === 'Declined').length;
-    const totalRevenue = orders.filter(o => o.status === 'Served').reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
     const availableItems = menuItems.filter(i => i.available).length;
     const unavailableItems = menuItems.filter(i => !i.available).length;
     
-    return { totalOrders, pendingOrders, preparingOrders, servedOrders, declinedOrders, totalRevenue, availableItems, unavailableItems };
+    return { totalOrders, pendingOrders, preparingOrders, servedOrders, totalRevenue, availableItems, unavailableItems };
   }
   
   function calculateTax(subtotal) {
@@ -858,10 +756,9 @@
           </div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
           <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500">Total Orders</p><p class="text-3xl font-bold">${stats.totalOrders}</p></div><i class="fas fa-receipt text-4xl text-orange-300"></i></div></div>
           <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500">Pending</p><p class="text-3xl font-bold text-yellow-600">${stats.pendingOrders}</p></div><i class="fas fa-clock text-4xl text-yellow-300"></i></div></div>
-          <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500">Declined</p><p class="text-3xl font-bold text-red-600">${stats.declinedOrders}</p></div><i class="fas fa-ban text-4xl text-red-300"></i></div></div>
           <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500">Revenue</p><p class="text-3xl font-bold text-green-600">${formatCurrency(stats.totalRevenue)}</p></div><i class="fas fa-rupee-sign text-4xl text-green-300"></i></div></div>
           <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500">Menu Items</p><p class="text-3xl font-bold">${stats.availableItems}/${stats.availableItems+stats.unavailableItems}</p></div><i class="fas fa-utensils text-4xl text-orange-300"></i></div></div>
         </div>
@@ -874,7 +771,7 @@
           </div>
           <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white cursor-pointer hover:shadow-xl transition" id="goToOrdersBtn">
             <h3 class="text-xl font-bold mb-2">📦 My Orders</h3>
-            <p class="text-blue-100 text-sm mb-4">Track & manage orders for your restaurant</p>
+            <p class="text-blue-100 text-sm mb-4">Track orders for your restaurant</p>
             <div class="inline-block bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold"><i class="fas fa-truck-fast mr-2"></i> View Orders</div>
           </div>
         </div>
@@ -885,14 +782,12 @@
             <div class="space-y-3 max-h-96 overflow-y-auto">
               ${recentOrders.map(order => `
                 <div class="order-row border rounded-lg p-4 flex flex-wrap justify-between items-center gap-3">
-                  <div><p class="font-semibold">#${order.id.slice(-8)}</p><p class="text-sm text-gray-500">Table ${order.tableNumber}</p></div>
+                  <div><p class="font-semibold">Bill #${order.billNumber || '0001'}</p><p class="text-sm text-gray-500">Table ${order.tableNumber}</p></div>
                   <div><p>${order.items?.length || 0} items</p><p class="text-orange-600 font-bold">${formatCurrency(order.totalPrice)}</p></div>
-                  <div><span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Preparing' ? 'bg-blue-100 text-blue-700' : order.status === 'Served' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${order.status}</span></div>
+                  <div><span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Preparing' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${order.status}</span></div>
                   <div class="flex gap-2">
                     ${order.status === 'Pending' ? `<button class="acceptOrderBtn bg-green-500 text-white px-3 py-1 rounded text-xs" data-id="${order.id}">Accept</button>` : ''}
                     ${order.status === 'Preparing' ? `<button class="serveOrderBtn bg-purple-500 text-white px-3 py-1 rounded text-xs" data-id="${order.id}">Serve</button>` : ''}
-                    ${order.status === 'Pending' ? `<button class="declineOrderBtn bg-red-500 text-white px-3 py-1 rounded text-xs" data-id="${order.id}">Decline</button>` : ''}
-                    ${(order.status === 'Served' || order.status === 'Preparing') ? `<button class="printOrderBtn bg-blue-500 text-white px-3 py-1 rounded text-xs" data-id="${order.id}"><i class="fas fa-print mr-1"></i>Print</button>` : ''}
                   </div>
                 </div>
               `).join('')}
@@ -957,40 +852,27 @@
     const pending = orders.filter(o => o.status === 'Pending');
     const preparing = orders.filter(o => o.status === 'Preparing');
     const completed = orders.filter(o => o.status === 'Served');
-    const declined = orders.filter(o => o.status === 'Declined');
-    let ordersToShow = currentTab === 'pending' ? pending : currentTab === 'preparing' ? preparing : currentTab === 'completed' ? completed : declined;
-    let tabName = currentTab === 'pending' ? 'Pending' : currentTab === 'preparing' ? 'Preparing' : currentTab === 'completed' ? 'Completed' : 'Declined';
+    let ordersToShow = currentTab === 'pending' ? pending : currentTab === 'preparing' ? preparing : completed;
     
     return `
       <div class="p-6">
-        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6"><button id="backToDashboardOrders" class="text-gray-600 hover:text-orange-600 mr-4"><i class="fas fa-arrow-left"></i> Back</button><h1 class="text-2xl font-bold inline-block">My Orders</h1><p class="text-gray-500 text-sm mt-1">Orders for ${userRestaurantData?.name || 'your restaurant'} - ${tabName} (${ordersToShow.length})</p></div>
-        <div class="flex gap-2 mb-6 border-b flex-wrap">
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6"><button id="backToDashboardOrders" class="text-gray-600 hover:text-orange-600 mr-4"><i class="fas fa-arrow-left"></i> Back</button><h1 class="text-2xl font-bold inline-block">My Orders</h1><p class="text-gray-500 text-sm mt-1">Orders for ${userRestaurantData?.name || 'your restaurant'}</p></div>
+        <div class="flex gap-2 mb-6 border-b">
           <button class="order-tab px-5 py-2 font-medium ${currentTab === 'pending' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="pending">Pending (${pending.length})</button>
           <button class="order-tab px-5 py-2 font-medium ${currentTab === 'preparing' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="preparing">Preparing (${preparing.length})</button>
           <button class="order-tab px-5 py-2 font-medium ${currentTab === 'completed' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="completed">Completed (${completed.length})</button>
-          <button class="order-tab px-5 py-2 font-medium ${currentTab === 'declined' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="declined">Declined (${declined.length})</button>
         </div>
         <div class="space-y-4">
-          ${ordersToShow.length === 0 ? '<div class="bg-white rounded-xl p-12 text-center"><i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No orders in this category</p></div>' : ordersToShow.map(order => `
+          ${ordersToShow.length === 0 ? '<div class="bg-white rounded-xl p-12 text-center"><i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No orders for your restaurant</p></div>' : ordersToShow.map(order => `
             <div class="bg-white rounded-xl shadow-sm p-5 order-row">
-              <div class="flex justify-between items-start mb-4 flex-wrap gap-3">
-                <div><h3 class="font-bold">Order #${order.id.slice(-8)}</h3><p class="text-sm text-gray-500">Table ${order.tableNumber} • ${new Date(order.timestamp).toLocaleString()}</p></div>
-                <div class="text-right"><p class="text-2xl font-bold text-orange-600">${formatCurrency(order.totalPrice)}</p><span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Preparing' ? 'bg-blue-100 text-blue-700' : order.status === 'Served' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${order.status}</span></div>
+              <div class="flex justify-between items-start mb-4">
+                <div><h3 class="font-bold">Bill #${order.billNumber || '0001'}</h3><p class="text-sm text-gray-500">Table ${order.tableNumber} • ${new Date(order.timestamp).toLocaleString()}</p></div>
+                <div class="text-right"><p class="text-2xl font-bold text-orange-600">${formatCurrency(order.totalPrice)}</p><span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Preparing' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${order.status}</span></div>
               </div>
-              <div class="border-t pt-3 mb-3"><p class="font-medium mb-2">Items:</p>${order.items.map(item => `
-                <div class="flex justify-between text-sm items-center">
-                  <div class="flex items-center gap-2">
-                    <span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>
-                    <span>${escapeHtml(item.name)} x${item.quantity}</span>
-                  </div>
-                  <span>${formatCurrency(item.price * item.quantity)}</span>
-                </div>
-              `).join('')}</div>
-              <div class="flex gap-2 flex-wrap">
+              <div class="border-t pt-3 mb-3"><p class="font-medium mb-2">Items:</p>${order.items.map(item => `<div class="flex justify-between text-sm"><span>${escapeHtml(item.name)} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}</div>
+              <div class="flex gap-2">
                 ${order.status === 'Pending' ? `<button class="acceptOrderBtn bg-green-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}"><i class="fas fa-check mr-1"></i> Accept & Prepare</button>` : ''}
                 ${order.status === 'Preparing' ? `<button class="serveOrderBtn bg-purple-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}"><i class="fas fa-check-double mr-1"></i> Mark as Served</button>` : ''}
-                ${order.status === 'Pending' ? `<button class="declineOrderBtn bg-red-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}"><i class="fas fa-times mr-1"></i> Decline Order</button>` : ''}
-                ${(order.status === 'Served' || order.status === 'Preparing') ? `<button class="printOrderBtn bg-blue-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}"><i class="fas fa-print mr-1"></i> Print Bill / Invoice</button>` : ''}
               </div>
             </div>
           `).join('')}
@@ -1036,7 +918,6 @@
             <div><label class="block text-sm font-medium mb-1">Category</label><select id="itemCategory" class="w-full border rounded-lg px-3 py-2">${categories.map(c => `<option value="${c}" ${item.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
             <div><label class="block text-sm font-medium mb-1">Description</label><textarea id="itemDescription" rows="3" class="w-full border rounded-lg px-3 py-2" placeholder="Brief description">${escapeHtml(item.description || '')}</textarea></div>
             
-            <!-- Veg/Non-Veg Selection -->
             <div>
               <label class="block text-sm font-medium mb-2">Food Type *</label>
               <div class="flex gap-4">
@@ -1133,6 +1014,7 @@
     document.getElementById('logoutBtn')?.addEventListener('click', () => { logoutUser(); });
     document.getElementById('goToMenuBtn')?.addEventListener('click', () => { currentView = 'menu'; render(); });
     document.getElementById('goToOrdersBtn')?.addEventListener('click', () => { currentView = 'orders'; currentTab = 'pending'; render(); });
+    document.getElementById('viewAllOrdersBtn')?.addEventListener('click', () => { currentView = 'orders'; currentTab = 'pending'; render(); });
     document.getElementById('backToDashboard')?.addEventListener('click', () => { currentView = 'dashboard'; render(); });
     document.getElementById('backToDashboardOrders')?.addEventListener('click', () => { currentView = 'dashboard'; render(); });
     document.getElementById('addItemBtn')?.addEventListener('click', () => { 
@@ -1173,22 +1055,6 @@
       btn.addEventListener('click', () => { updateOrderStatus(btn.dataset.id, 'Served'); });
     });
     
-    document.querySelectorAll('.printOrderBtn').forEach(btn => {
-      btn.addEventListener('click', () => { 
-        const order = orders.find(o => o.id === btn.dataset.id);
-        if (order) printOrderBill(order);
-        else showNotification('Order not found', 'error');
-      });
-    });
-    
-    document.querySelectorAll('.declineOrderBtn').forEach(btn => {
-      btn.addEventListener('click', () => { 
-        const order = orders.find(o => o.id === btn.dataset.id);
-        if (order) declineOrder(btn.dataset.id, order);
-        else showNotification('Order not found', 'error');
-      });
-    });
-    
     document.querySelectorAll('.order-tab').forEach(tab => {
       tab.addEventListener('click', () => { currentTab = tab.dataset.tab; render(); });
     });
@@ -1220,7 +1086,6 @@
       const description = document.getElementById('itemDescription')?.value;
       const file = document.getElementById('itemFile')?.files[0];
       
-      // Get veg/non-veg selection
       const foodTypeRadio = document.querySelector('input[name="foodType"]:checked');
       const isVeg = foodTypeRadio?.value === 'veg';
       
@@ -1240,6 +1105,7 @@
   
   // ======================== INITIALIZATION ========================
   function init() {
+    loadBillCounter();
     checkAuthState();
   }
   
