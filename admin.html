@@ -29,6 +29,26 @@
     .veg-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .veg-dot.green { background: #22c55e; }
     .veg-dot.red { background: #ef4444; }
+    
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .bill-print, .bill-print * {
+        visibility: visible;
+      }
+      .bill-print {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 20px;
+        background: white;
+      }
+      .no-print {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -102,7 +122,7 @@
   let compressProgress = 0;
   let showTaxModal = false;
   
-  // Bill counter - starts from 0001 (same as customer portal)
+  // Bill counter - starts from 0001
   let billCounter = 1;
   
   function loadBillCounter() {
@@ -339,7 +359,8 @@
           serviceCharge: data.serviceCharge,
           totalPrice: data.totalPrice,
           status: data.status || 'Pending',
-          timestamp: data.timestamp
+          timestamp: data.timestamp,
+          restaurantName: data.restaurantName || userRestaurantData?.name || 'QR Dine'
         });
       });
       orders.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -441,6 +462,7 @@
     }
   }
   
+  // ======================== ORDER STATUS MANAGEMENT ========================
   async function updateOrderStatus(orderId, newStatus) {
     try {
       await updateDoc(doc(db, "orders", orderId), {
@@ -609,13 +631,16 @@
   function getStats() {
     const totalOrders = orders.length;
     const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+    const acceptedOrders = orders.filter(o => o.status === 'Accepted').length;
     const preparingOrders = orders.filter(o => o.status === 'Preparing').length;
+    const readyOrders = orders.filter(o => o.status === 'Ready').length;
     const servedOrders = orders.filter(o => o.status === 'Served').length;
-    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const declinedOrders = orders.filter(o => o.status === 'Declined').length;
+    const totalRevenue = orders.filter(o => o.status !== 'Declined').reduce((sum, o) => sum + (o.totalPrice || 0), 0);
     const availableItems = menuItems.filter(i => i.available).length;
     const unavailableItems = menuItems.filter(i => !i.available).length;
     
-    return { totalOrders, pendingOrders, preparingOrders, servedOrders, totalRevenue, availableItems, unavailableItems };
+    return { totalOrders, pendingOrders, acceptedOrders, preparingOrders, readyOrders, servedOrders, declinedOrders, totalRevenue, availableItems, unavailableItems };
   }
   
   function calculateTax(subtotal) {
@@ -633,6 +658,80 @@
     }
     
     return { subtotal, cgst, sgst, serviceCharge, totalTax, roundOff, grandTotal };
+  }
+  
+  // ======================== PRINT BILL FUNCTION ========================
+  function printBill(order) {
+    const printWindow = window.open('', '_blank');
+    const orderDate = new Date(order.timestamp).toLocaleString();
+    const orderTime = new Date(order.timestamp).toLocaleTimeString();
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Bill #${order.billNumber}</title>
+        <style>
+          * { font-family: Arial, sans-serif; }
+          body { padding: 20px; }
+          .bill-container { max-width: 400px; margin: 0 auto; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+          .restaurant-name { font-size: 24px; font-weight: bold; margin: 0; }
+          .bill-title { font-size: 18px; margin: 5px 0; }
+          .bill-details { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+          th { background-color: #f5f5f5; }
+          .text-right { text-align: right; }
+          .total-section { border-top: 2px solid #333; margin-top: 10px; padding-top: 10px; }
+          .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
+          .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+          .status-pending { background: #fef3c7; color: #92400e; }
+          .status-accepted { background: #dbeafe; color: #1e40af; }
+          .status-preparing { background: #fed7aa; color: #9a3412; }
+          .status-ready { background: #d1fae5; color: #065f46; }
+          .status-served { background: #dcfce7; color: #166534; }
+          .status-declined { background: #fee2e2; color: #991b1b; }
+        </style>
+      </head>
+      <body>
+        <div class="bill-container">
+          <div class="header">
+            <h1 class="restaurant-name">${order.restaurantName || userRestaurantData?.name || 'QR Dine'}</h1>
+            <p class="bill-title">Digital Restaurant Bill</p>
+          </div>
+          <div class="bill-details">
+            <span><strong>Bill No:</strong> ${order.billNumber}</span>
+            <span><strong>Table:</strong> ${order.tableNumber}</span>
+            <span><strong>Date:</strong> ${orderDate.split(',')[0]}</span>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Item</th><th>Qty</th><th class="text-right">Price</th><th class="text-right">Total</th></tr>
+            </thead>
+            <tbody>
+              ${order.items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${item.quantity}</td><td class="text-right">${formatCurrency(item.price)}</td><td class="text-right">${formatCurrency(item.price * item.quantity)}</td></tr>`).join('')}
+            </tbody>
+          </table>
+          <div class="total-section">
+            <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span>${formatCurrency(order.subtotal)}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span>CGST (2.5%):</span><span>${formatCurrency(order.cgst)}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span>SGST (2.5%):</span><span>${formatCurrency(order.sgst)}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span>Service Charge (5%):</span><span>${formatCurrency(order.serviceCharge)}</span></div>
+            ${order.roundOff !== 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px;"><span>Round Off:</span><span>${order.roundOff > 0 ? '+' : ''}${formatCurrency(order.roundOff)}</span></div>` : ''}
+            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;"><span>Grand Total:</span><span>${formatCurrency(order.totalPrice)}</span></div>
+          </div>
+          <div class="footer">
+            <p>Thank you for dining with us!</p>
+            <p>Order Status: <span class="status status-${order.status.toLowerCase()}">${order.status}</span></p>
+            <p>** This is a computer generated bill **</p>
+          </div>
+        </div>
+        <script>window.print();setTimeout(function(){window.close();}, 1000);<\/script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   }
   
   // ======================== UI FUNCTIONS ========================
@@ -784,10 +883,14 @@
                 <div class="order-row border rounded-lg p-4 flex flex-wrap justify-between items-center gap-3">
                   <div><p class="font-semibold">Bill #${order.billNumber || '0001'}</p><p class="text-sm text-gray-500">Table ${order.tableNumber}</p></div>
                   <div><p>${order.items?.length || 0} items</p><p class="text-orange-600 font-bold">${formatCurrency(order.totalPrice)}</p></div>
-                  <div><span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Preparing' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${order.status}</span></div>
+                  <div><span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Accepted' ? 'bg-blue-100 text-blue-700' : order.status === 'Preparing' ? 'bg-purple-100 text-purple-700' : order.status === 'Ready' ? 'bg-green-100 text-green-700' : order.status === 'Served' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${order.status}</span></div>
                   <div class="flex gap-2">
-                    ${order.status === 'Pending' ? `<button class="acceptOrderBtn bg-green-500 text-white px-3 py-1 rounded text-xs" data-id="${order.id}">Accept</button>` : ''}
-                    ${order.status === 'Preparing' ? `<button class="serveOrderBtn bg-purple-500 text-white px-3 py-1 rounded text-xs" data-id="${order.id}">Serve</button>` : ''}
+                    ${order.status === 'Pending' ? `<button class="acceptOrderBtn bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600" data-id="${order.id}">Accept</button>` : ''}
+                    ${order.status === 'Pending' ? `<button class="declineOrderBtn bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600" data-id="${order.id}">Decline</button>` : ''}
+                    ${order.status === 'Accepted' ? `<button class="prepareOrderBtn bg-purple-500 text-white px-3 py-1 rounded text-xs hover:bg-purple-600" data-id="${order.id}">Prepare</button>` : ''}
+                    ${order.status === 'Preparing' ? `<button class="readyOrderBtn bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600" data-id="${order.id}">Mark Ready</button>` : ''}
+                    ${order.status === 'Ready' ? `<button class="serveOrderBtn bg-emerald-500 text-white px-3 py-1 rounded text-xs hover:bg-emerald-600" data-id="${order.id}">Serve</button>` : ''}
+                    ${order.status !== 'Declined' && order.status !== 'Served' ? `<button class="printOrderBtn bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600" data-order='${JSON.stringify(order)}'><i class="fas fa-print"></i> Print</button>` : ''}
                   </div>
                 </div>
               `).join('')}
@@ -850,29 +953,70 @@
   
   function renderOrdersManagement() {
     const pending = orders.filter(o => o.status === 'Pending');
+    const accepted = orders.filter(o => o.status === 'Accepted');
     const preparing = orders.filter(o => o.status === 'Preparing');
+    const ready = orders.filter(o => o.status === 'Ready');
     const completed = orders.filter(o => o.status === 'Served');
-    let ordersToShow = currentTab === 'pending' ? pending : currentTab === 'preparing' ? preparing : completed;
+    const declined = orders.filter(o => o.status === 'Declined');
+    
+    let ordersToShow = [];
+    if (currentTab === 'pending') ordersToShow = pending;
+    else if (currentTab === 'accepted') ordersToShow = accepted;
+    else if (currentTab === 'preparing') ordersToShow = preparing;
+    else if (currentTab === 'ready') ordersToShow = ready;
+    else if (currentTab === 'completed') ordersToShow = completed;
+    else if (currentTab === 'declined') ordersToShow = declined;
     
     return `
       <div class="p-6">
         <div class="bg-white rounded-2xl shadow-sm p-6 mb-6"><button id="backToDashboardOrders" class="text-gray-600 hover:text-orange-600 mr-4"><i class="fas fa-arrow-left"></i> Back</button><h1 class="text-2xl font-bold inline-block">My Orders</h1><p class="text-gray-500 text-sm mt-1">Orders for ${userRestaurantData?.name || 'your restaurant'}</p></div>
-        <div class="flex gap-2 mb-6 border-b">
-          <button class="order-tab px-5 py-2 font-medium ${currentTab === 'pending' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="pending">Pending (${pending.length})</button>
-          <button class="order-tab px-5 py-2 font-medium ${currentTab === 'preparing' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="preparing">Preparing (${preparing.length})</button>
-          <button class="order-tab px-5 py-2 font-medium ${currentTab === 'completed' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="completed">Completed (${completed.length})</button>
+        <div class="flex gap-2 mb-6 border-b overflow-x-auto pb-2">
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'pending' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="pending">Pending (${pending.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'accepted' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="accepted">Accepted (${accepted.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'preparing' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="preparing">Preparing (${preparing.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'ready' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="ready">Ready (${ready.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'completed' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="completed">Completed (${completed.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'declined' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="declined">Declined (${declined.length})</button>
         </div>
         <div class="space-y-4">
-          ${ordersToShow.length === 0 ? '<div class="bg-white rounded-xl p-12 text-center"><i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No orders for your restaurant</p></div>' : ordersToShow.map(order => `
+          ${ordersToShow.length === 0 ? '<div class="bg-white rounded-xl p-12 text-center"><i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No orders in this category</p></div>' : ordersToShow.map(order => `
             <div class="bg-white rounded-xl shadow-sm p-5 order-row">
-              <div class="flex justify-between items-start mb-4">
-                <div><h3 class="font-bold">Bill #${order.billNumber || '0001'}</h3><p class="text-sm text-gray-500">Table ${order.tableNumber} • ${new Date(order.timestamp).toLocaleString()}</p></div>
-                <div class="text-right"><p class="text-2xl font-bold text-orange-600">${formatCurrency(order.totalPrice)}</p><span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Preparing' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${order.status}</span></div>
+              <div class="flex justify-between items-start mb-4 flex-wrap gap-3">
+                <div>
+                  <h3 class="font-bold">Bill #${order.billNumber || '0001'}</h3>
+                  <p class="text-sm text-gray-500">Table ${order.tableNumber} • ${new Date(order.timestamp).toLocaleString()}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-2xl font-bold text-orange-600">${formatCurrency(order.totalPrice)}</p>
+                  <span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Accepted' ? 'bg-blue-100 text-blue-700' : order.status === 'Preparing' ? 'bg-purple-100 text-purple-700' : order.status === 'Ready' ? 'bg-green-100 text-green-700' : order.status === 'Served' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${order.status}</span>
+                </div>
               </div>
-              <div class="border-t pt-3 mb-3"><p class="font-medium mb-2">Items:</p>${order.items.map(item => `<div class="flex justify-between text-sm"><span>${escapeHtml(item.name)} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}</div>
-              <div class="flex gap-2">
-                ${order.status === 'Pending' ? `<button class="acceptOrderBtn bg-green-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}"><i class="fas fa-check mr-1"></i> Accept & Prepare</button>` : ''}
-                ${order.status === 'Preparing' ? `<button class="serveOrderBtn bg-purple-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}"><i class="fas fa-check-double mr-1"></i> Mark as Served</button>` : ''}
+              <div class="border-t pt-3 mb-3">
+                <p class="font-medium mb-2">Items:</p>
+                <div class="space-y-1">
+                  ${order.items.map(item => `<div class="flex justify-between text-sm"><span>${escapeHtml(item.name)} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2 pt-2">
+                ${order.status === 'Pending' ? `
+                  <button class="acceptOrderBtn bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition" data-id="${order.id}"><i class="fas fa-check mr-1"></i> Accept Order</button>
+                  <button class="declineOrderBtn bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition" data-id="${order.id}"><i class="fas fa-times mr-1"></i> Decline Order</button>
+                ` : ''}
+                ${order.status === 'Accepted' ? `
+                  <button class="prepareOrderBtn bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-600 transition" data-id="${order.id}"><i class="fas fa-fire mr-1"></i> Start Preparing</button>
+                ` : ''}
+                ${order.status === 'Preparing' ? `
+                  <button class="readyOrderBtn bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition" data-id="${order.id}"><i class="fas fa-bell mr-1"></i> Mark as Ready</button>
+                ` : ''}
+                ${order.status === 'Ready' ? `
+                  <button class="serveOrderBtn bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition" data-id="${order.id}"><i class="fas fa-check-double mr-1"></i> Serve Order</button>
+                ` : ''}
+                ${order.status !== 'Declined' && order.status !== 'Served' ? `
+                  <button class="printOrderBtn bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition" data-order='${JSON.stringify(order)}'><i class="fas fa-print mr-1"></i> Print Bill</button>
+                ` : ''}
+                ${order.status === 'Declined' ? `
+                  <button class="deleteOrderBtn bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition" data-id="${order.id}"><i class="fas fa-trash mr-1"></i> Remove</button>
+                ` : ''}
               </div>
             </div>
           `).join('')}
@@ -1047,12 +1191,49 @@
       btn.addEventListener('click', () => { deleteMenuItem(btn.dataset.id, btn.dataset.name); });
     });
     
+    // Order action buttons
     document.querySelectorAll('.acceptOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => { updateOrderStatus(btn.dataset.id, 'Accepted'); });
+    });
+    
+    document.querySelectorAll('.declineOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => { 
+        if (confirm('Are you sure you want to decline this order?')) {
+          updateOrderStatus(btn.dataset.id, 'Declined');
+        }
+      });
+    });
+    
+    document.querySelectorAll('.prepareOrderBtn').forEach(btn => {
       btn.addEventListener('click', () => { updateOrderStatus(btn.dataset.id, 'Preparing'); });
+    });
+    
+    document.querySelectorAll('.readyOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => { updateOrderStatus(btn.dataset.id, 'Ready'); });
     });
     
     document.querySelectorAll('.serveOrderBtn').forEach(btn => {
       btn.addEventListener('click', () => { updateOrderStatus(btn.dataset.id, 'Served'); });
+    });
+    
+    document.querySelectorAll('.deleteOrderBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (confirm('Permanently delete this declined order?')) {
+          try {
+            await deleteDoc(doc(db, "orders", btn.dataset.id));
+            showNotification('Order deleted successfully', 'success');
+          } catch (error) {
+            showNotification('Error deleting order', 'error');
+          }
+        }
+      });
+    });
+    
+    document.querySelectorAll('.printOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const order = JSON.parse(btn.dataset.order);
+        printBill(order);
+      });
     });
     
     document.querySelectorAll('.order-tab').forEach(tab => {
