@@ -3,59 +3,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>QR Dine | Premium Admin Dashboard</title>
+  <title>QR Dine | Multi-Restaurant Admin Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'Inter', sans-serif; }
     body { background: #f1f5f9; }
-    
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
-    
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-    
-    .order-card { animation: slideIn 0.3s ease-out; }
-    .new-order-alert { animation: pulse 0.5s ease-in-out; }
-    
-    .dark-mode { background: #0f172a; color: #f1f5f9; }
-    .dark-mode .bg-white { background: #1e293b; }
-    .dark-mode .bg-gray-50 { background: #0f172a; }
-    .dark-mode .text-gray-600 { color: #94a3b8; }
-    .dark-mode .border-gray-200 { border-color: #334155; }
-    
-    .kitchen-mode { background: #0a0a0a; }
-    .kitchen-mode .order-card { background: #1a1a1a; border: 1px solid #333; }
-    .kitchen-mode .order-card h3, .kitchen-mode .order-card p { color: #fff; }
-    
-    .toast-notification {
-      position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white;
-      padding: 12px 20px; border-radius: 12px; z-index: 1000;
-      animation: slideIn 0.3s ease-out; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-    }
+    .menu-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+    .menu-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.15); }
+    .badge-available { background: #dcfce7; color: #166534; }
+    .badge-unavailable { background: #fee2e2; color: #991b1b; }
+    .veg-badge { background: #dcfce7; color: #166534; }
+    .nonveg-badge { background: #fee2e2; color: #991b1b; }
+    .order-row:hover { background: #fef3c7; }
+    .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #f97316; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .image-preview { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #f97316; }
+    .toast { position: fixed; top: 20px; right: 20px; z-index: 9999; animation: slideUp 0.3s ease-out; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .menu-image { width: 100%; height: 180px; object-fit: cover; background: #f1f5f9; }
+    .modal-enter { animation: fadeIn 0.2s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .compress-progress { transition: width 0.3s ease; }
+    .veg-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .veg-dot.green { background: #22c55e; }
+    .veg-dot.red { background: #ef4444; }
     
     @media print {
-      body * { visibility: hidden; }
-      .print-bill, .print-bill * { visibility: visible; }
-      .print-bill { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background: white; }
-      .no-print { display: none; }
+      body * {
+        visibility: hidden;
+      }
+      .bill-print, .bill-print * {
+        visibility: visible;
+      }
+      .bill-print {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 20px;
+        background: white;
+      }
+      .no-print {
+        display: none;
+      }
     }
   </style>
 </head>
 <body>
-<div id="admin-dashboard"></div>
+<div id="admin-root"></div>
 
 <script type="module">
+  // ======================== FIREBASE CONFIGURATION ========================
   const firebaseConfig = {
     apiKey: "AIzaSyDnTl39uYi-NHhBEMeObezN2Uyqkk8sk6Q",
     authDomain: "qrdines-829b7.firebaseapp.com",
@@ -66,320 +66,1231 @@
     measurementId: "G-8Y4DWD208G"
   };
 
+  // Import Firebase modules
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { 
-    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot,
-    query, where, orderBy, serverTimestamp, getDocs
+    getFirestore, 
+    collection, 
+    addDoc, 
+    updateDoc, 
+    deleteDoc, 
+    doc, 
+    onSnapshot, 
+    query, 
+    orderBy, 
+    serverTimestamp,
+    getDocs,
+    where,
+    limit 
   } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    updateProfile
+  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
   
-  // ======================== LOGGING SYSTEM ========================
-  let activityLogs = [];
-  function addLog(action, details) {
-    const log = { id: Date.now(), timestamp: new Date().toISOString(), action, details, user: currentUser?.email || 'admin' };
-    activityLogs.unshift(log);
-    if (activityLogs.length > 200) activityLogs.pop();
-    localStorage.setItem('admin_activity_logs', JSON.stringify(activityLogs));
-  }
-  function loadLogs() { const saved = localStorage.getItem('admin_activity_logs'); if (saved) activityLogs = JSON.parse(saved); }
-  
-  function playSound(type) {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    if (type === 'order') { oscillator.frequency.value = 880; gainNode.gain.value = 0.3; oscillator.start(); setTimeout(() => { oscillator.stop(); audioContext.close(); }, 300); }
-    else if (type === 'request') { oscillator.frequency.value = 440; gainNode.gain.value = 0.3; oscillator.start(); setTimeout(() => { oscillator.stop(); audioContext.close(); }, 500); }
-  }
+  // ======================== TAX/GST CONFIGURATION ========================
+  const TAX_CONFIG = {
+    cgst: { rate: 2.5, name: "CGST", enabled: true },
+    sgst: { rate: 2.5, name: "SGST", enabled: true },
+    serviceCharge: { rate: 5, name: "Service Charge", enabled: true },
+    roundOff: true
+  };
   
   // ======================== GLOBAL STATE ========================
-  let currentUser = null, isLoggedIn = false, userRole = 'admin', currentView = 'dashboard';
-  let darkMode = localStorage.getItem('darkMode') === 'true', kitchenMode = false;
-  let orders = [], menuItems = [], tables = [], serviceRequests = [], orderHistory = [];
-  let selectedMonth = new Date().getMonth();
-  let selectedYear = new Date().getFullYear();
-  let dateFilter = 'today';
-  let comparisonView = false;
+  let menuItems = [];
+  let orders = [];
+  let currentUser = null;
+  let userRestaurantData = null;
+  let isLoggedIn = false;
+  let currentView = 'dashboard';
+  let currentTab = 'pending';
+  let editingItem = null;
+  let showModal = false;
+  let selectedFile = null;
+  let imagePreviewUrl = null;
+  let isLoading = true;
+  let isCompressing = false;
+  let compressProgress = 0;
+  let showTaxModal = false;
   
-  for (let i = 1; i <= 20; i++) tables.push({ id: i, status: 'free', currentOrder: null });
+  // Bill counter - starts from 0001
+  let billCounter = 1;
   
-  const DEFAULT_MENU = [
-    { id: 1, name: "Paneer Tikka", price: 220, category: "Starters", veg: true, available: true, prepTime: 15, image: "🍽️", orders: 45 },
-    { id: 2, name: "Chicken 65", price: 280, category: "Starters", veg: false, available: true, prepTime: 12, image: "🍗", orders: 38 },
-    { id: 3, name: "Chicken Biryani", price: 320, category: "Main Course", veg: false, available: true, prepTime: 20, image: "🍛", orders: 52 },
-    { id: 4, name: "Veg Biryani", price: 250, category: "Main Course", veg: true, available: true, prepTime: 18, image: "🥘", orders: 30 },
-    { id: 5, name: "Butter Naan", price: 45, category: "Breads", veg: true, available: true, prepTime: 5, image: "🥖", orders: 28 },
-    { id: 6, name: "Mango Lassi", price: 90, category: "Beverages", veg: true, available: true, prepTime: 3, image: "🥭", orders: 25 },
-    { id: 7, name: "Gulab Jamun", price: 80, category: "Desserts", veg: true, available: true, prepTime: 5, image: "🍨", orders: 22 }
-  ];
-  
-  const SAMPLE_ORDERS = [
-    { id: 'ORD001', tableNumber: 5, items: [{ name: "Paneer Tikka", quantity: 2, price: 220 }], totalPrice: 440, status: 'Pending', timestamp: new Date().toISOString(), elapsed: '2 min' },
-    { id: 'ORD002', tableNumber: 3, items: [{ name: "Chicken Biryani", quantity: 1, price: 320 }, { name: "Mango Lassi", quantity: 2, price: 90 }], totalPrice: 500, status: 'Preparing', timestamp: new Date(Date.now() - 5*60000).toISOString(), elapsed: '5 min' },
-    { id: 'ORD003', tableNumber: 8, items: [{ name: "Veg Biryani", quantity: 1, price: 250 }], totalPrice: 250, status: 'Ready', timestamp: new Date(Date.now() - 10*60000).toISOString(), elapsed: '10 min' }
-  ];
-  
-  for (let i = 1; i <= 30; i++) {
-    let date = new Date(2024, selectedMonth, i);
-    if (date.getMonth() === selectedMonth) {
-      orderHistory.push({ id: `ORD${i}`, date: date.toISOString(), totalPrice: Math.floor(Math.random() * 5000) + 1000, items: 3 });
+  function loadBillCounter() {
+    const saved = localStorage.getItem('admin_bill_counter');
+    if (saved) {
+      billCounter = parseInt(saved);
+    } else {
+      billCounter = 1;
     }
   }
   
-  const SAMPLE_REQUESTS = [
-    { id: 1, tableNumber: 5, type: 'waiter', status: 'pending', timestamp: new Date().toISOString() },
-    { id: 2, tableNumber: 8, type: 'water', status: 'pending', timestamp: new Date().toISOString() }
-  ];
-  
-  function loadOrders() { orders = [...SAMPLE_ORDERS]; if (currentView === 'dashboard' || currentView === 'orders') render(); }
-  function loadMenu() { const stored = localStorage.getItem('restaurant_menu'); menuItems = stored ? JSON.parse(stored) : [...DEFAULT_MENU]; }
-  function loadServiceRequests() { serviceRequests = [...SAMPLE_REQUESTS]; }
-  
-  function updateOrderStatus(orderId, newStatus) {
-    const order = orders.find(o => o.id === orderId);
-    if (order) { order.status = newStatus; addLog('ORDER_STATUS_UPDATED', { orderId, status: newStatus, table: order.tableNumber }); showNotification(`Order #${orderId.slice(-6)} marked as ${newStatus}`, 'info'); render(); }
+  function saveBillCounter() {
+    localStorage.setItem('admin_bill_counter', billCounter);
   }
   
-  function addTestOrder() {
-    const newOrder = { id: 'ORD' + Date.now(), tableNumber: Math.floor(Math.random() * 20) + 1, items: [{ name: "Paneer Tikka", quantity: 2, price: 220 }], totalPrice: 440, status: 'Pending', timestamp: new Date().toISOString(), elapsed: '0 min' };
-    orders.unshift(newOrder); addLog('TEST_ORDER_ADDED', { orderId: newOrder.id, table: newOrder.tableNumber }); playSound('order'); showNotification(`New order from Table ${newOrder.tableNumber}!`, 'success'); render();
+  function getNextBillNumber() {
+    const billNum = billCounter;
+    billCounter++;
+    saveBillCounter();
+    return String(billNum).padStart(4, '0');
   }
   
-  function resolveServiceRequest(requestId) { serviceRequests = serviceRequests.filter(r => r.id !== requestId); addLog('SERVICE_REQUEST_RESOLVED', { requestId }); render(); }
+  let selectedVegStatus = true;
   
-  function getTableStatus() {
-    tables.forEach(table => { const activeOrder = orders.find(o => o.tableNumber === table.id && o.status !== 'Served' && o.status !== 'Declined'); table.status = activeOrder ? 'occupied' : 'free'; table.currentOrder = activeOrder; });
-    return tables;
+  const categories = ['Starters', 'Main Course', 'Breads', 'Beverages', 'Desserts', 'Soups', 'Salads', 'Seafood', 'Tandoor', 'Rolls', 'Combo Meals'];
+  
+  // Image compression settings
+  const MAX_IMAGE_SIZE_KB = 400;
+  const MAX_IMAGE_DIMENSION = 800;
+  
+  // ======================== HELPER FUNCTIONS ========================
+  function showNotification(message, type = 'success') {
+    const toast = document.createElement('div');
+    const colors = { success: '#22c55e', error: '#ef4444', info: '#3b82f6', warning: '#f59e0b' };
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+    toast.className = `toast px-5 py-3 rounded-lg shadow-lg text-white font-medium text-sm flex items-center gap-2`;
+    toast.style.background = colors[type] || colors.success;
+    toast.innerHTML = `<i class="fas ${icons[type]} mr-2"></i>${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
   }
   
-  function addMenuItem(itemData) { const newId = Date.now(); const newItem = { id: newId, ...itemData }; menuItems.push(newItem); localStorage.setItem('restaurant_menu', JSON.stringify(menuItems)); addLog('MENU_ITEM_ADDED', { item: itemData.name }); showNotification(`"${itemData.name}" added`, 'success'); render(); }
-  function updateMenuItem(id, updates) { const index = menuItems.findIndex(i => i.id == id); if (index !== -1) { menuItems[index] = { ...menuItems[index], ...updates }; localStorage.setItem('restaurant_menu', JSON.stringify(menuItems)); addLog('MENU_ITEM_UPDATED', { id, updates }); showNotification('Item updated', 'success'); render(); } }
-  function deleteMenuItem(id, name) { if (confirm(`Delete "${name}"?`)) { menuItems = menuItems.filter(i => i.id != id); localStorage.setItem('restaurant_menu', JSON.stringify(menuItems)); addLog('MENU_ITEM_DELETED', { id, name }); showNotification(`"${name}" deleted`, 'info'); render(); } }
-  function toggleAvailability(id, currentStatus) { updateMenuItem(id, { available: !currentStatus }); }
+  function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
+  }
   
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+  
+  // ======================== IMAGE COMPRESSION ========================
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) {
+        resolve("https://placehold.co/400x200/e2e8f0/475569?text=No+Image");
+        return;
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        resolve("https://placehold.co/400x200/e2e8f0/475569?text=Not+an+Image");
+        return;
+      }
+      
+      isCompressing = true;
+      compressProgress = 0;
+      render();
+      
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = () => {
+          compressProgress = 30;
+          render();
+          
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+            if (width > height) {
+              height = (height * MAX_IMAGE_DIMENSION) / width;
+              width = MAX_IMAGE_DIMENSION;
+            } else {
+              width = (width * MAX_IMAGE_DIMENSION) / height;
+              height = MAX_IMAGE_DIMENSION;
+            }
+          }
+          
+          compressProgress = 60;
+          render();
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          let quality = 0.8;
+          let result = canvas.toDataURL('image/jpeg', quality);
+          
+          while (result.length > MAX_IMAGE_SIZE_KB * 1024 && quality > 0.1) {
+            quality -= 0.1;
+            result = canvas.toDataURL('image/jpeg', quality);
+          }
+          
+          compressProgress = 100;
+          render();
+          
+          setTimeout(() => {
+            isCompressing = false;
+            compressProgress = 0;
+            resolve(result);
+          }, 500);
+        };
+        img.onerror = () => {
+          isCompressing = false;
+          resolve("https://placehold.co/400x200/e2e8f0/475569?text=Invalid+Image");
+        };
+      };
+      reader.onerror = () => {
+        isCompressing = false;
+        reject("Failed to read file");
+      };
+    });
+  }
+  
+  // ======================== RESTAURANT DATA FUNCTIONS ========================
+  async function createRestaurantProfile(userId, name, address, phone) {
+    try {
+      const restaurantRef = collection(db, "restaurants");
+      const restaurantData = {
+        userId: userId,
+        name: name,
+        address: address,
+        phone: phone,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      const docRef = await addDoc(restaurantRef, restaurantData);
+      return { id: docRef.id, ...restaurantData };
+    } catch (error) {
+      console.error("Error creating restaurant profile:", error);
+      throw error;
+    }
+  }
+  
+  async function getRestaurantProfile(userId) {
+    try {
+      const restaurantsRef = collection(db, "restaurants");
+      const q = query(restaurantsRef, where("userId", "==", userId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error("Error getting restaurant profile:", error);
+      return null;
+    }
+  }
+  
+  // ======================== DATA ISOLATION - QUERIES WITH userId ========================
+  function listenToMenu() {
+    if (!isLoggedIn || !currentUser) return;
+  
+    isLoading = true;
+    render();
+    
+    const menuRef = collection(db, "menu");
+    const menuQuery = query(menuRef, where("restaurantId", "==", currentUser.uid));
+    
+    onSnapshot(menuQuery, (snapshot) => {
+      menuItems = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        menuItems.push({ 
+          id: doc.id,
+          name: data.name || '',
+          price: data.price || 0,
+          category: data.category || '',
+          description: data.description || '',
+          image: data.image || "https://placehold.co/400x200/e2e8f0/475569?text=No+Image",
+          available: data.available !== false,
+          rating: data.rating || 4.5,
+          veg: data.veg !== undefined ? data.veg : true,
+          popular: data.popular || false,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt
+        });
+      });
+      menuItems.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return b.createdAt.seconds - a.createdAt.seconds;
+        }
+        return 0;
+      });
+      isLoading = false;
+      if (currentView === 'menu') render();
+      console.log(`✅ Menu loaded for restaurant ${currentUser.uid}: ${menuItems.length} items`);
+    }, (error) => {
+      console.error("Error loading menu:", error);
+      isLoading = false;
+      showNotification("Error loading menu: " + error.message, "error");
+    });
+  }
+  
+  function listenToOrders() {
+    if (!isLoggedIn || !currentUser) return;
+    
+    const ordersRef = collection(db, "orders");
+    const ordersQuery = query(ordersRef, where("restaurantId", "==", currentUser.uid));
+    
+    onSnapshot(ordersQuery, (snapshot) => {
+      orders = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        orders.push({ 
+          id: doc.id,
+          tableNumber: data.tableNumber,
+          billNumber: data.billNumber || '0001',
+          items: data.items || [],
+          subtotal: data.subtotal,
+          cgst: data.cgst,
+          sgst: data.sgst,
+          serviceCharge: data.serviceCharge,
+          totalPrice: data.totalPrice,
+          status: data.status || 'Pending',
+          timestamp: data.timestamp,
+          restaurantName: data.restaurantName || userRestaurantData?.name || 'QR Dine'
+        });
+      });
+      orders.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (currentView === 'dashboard' || currentView === 'orders') render();
+      console.log(`✅ Orders loaded for restaurant ${currentUser.uid}: ${orders.length} orders`);
+    }, (error) => {
+      console.error("Error loading orders:", error);
+    });
+  }
+  
+  // ======================== MENU CRUD WITH VEG/NON-VEG SUPPORT ========================
+  async function addMenuItem(itemData, file) {
+    try {
+      let imageData = "https://placehold.co/400x200/e2e8f0/475569?text=No+Image";
+      
+      if (file) {
+        imageData = await compressImage(file);
+      }
+      
+      const menuItem = {
+        restaurantId: currentUser.uid,
+        name: itemData.name,
+        price: parseFloat(itemData.price),
+        category: itemData.category,
+        description: itemData.description || '',
+        image: imageData,
+        available: true,
+        rating: 4.5,
+        veg: itemData.veg,
+        popular: false,
+        createdBy: currentUser?.uid,
+        createdByEmail: currentUser?.email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(collection(db, "menu"), menuItem);
+      showNotification(`✅ "${itemData.name}" added to your restaurant!`, 'success');
+      return true;
+    } catch (error) {
+      console.error("Error adding item:", error);
+      showNotification("Error adding item: " + error.message, 'error');
+      return false;
+    }
+  }
+  
+  async function updateMenuItem(id, updates, newFile = null) {
+    try {
+      let imageData = updates.image;
+      
+      if (newFile) {
+        imageData = await compressImage(newFile);
+      }
+      
+      const updateData = {
+        name: updates.name,
+        price: parseFloat(updates.price),
+        category: updates.category,
+        description: updates.description || '',
+        image: imageData,
+        veg: updates.veg,
+        updatedBy: currentUser?.uid,
+        updatedByEmail: currentUser?.email,
+        updatedAt: serverTimestamp()
+      };
+      
+      await updateDoc(doc(db, "menu", id), updateData);
+      showNotification(`✅ "${updates.name}" updated successfully!`, 'success');
+      return true;
+    } catch (error) {
+      console.error("Error updating item:", error);
+      showNotification("Error updating item: " + error.message, 'error');
+      return false;
+    }
+  }
+  
+  async function deleteMenuItem(id, name) {
+    if (!confirm(`⚠️ Delete "${name}" permanently?\n\nThis action cannot be undone!`)) return;
+    
+    try {
+      await deleteDoc(doc(db, "menu", id));
+      showNotification(`✅ "${name}" deleted successfully!`, 'success');
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      showNotification("Error deleting item: " + error.message, 'error');
+    }
+  }
+  
+  async function toggleAvailability(id, currentStatus) {
+    try {
+      await updateDoc(doc(db, "menu", id), { 
+        available: !currentStatus,
+        updatedAt: serverTimestamp()
+      });
+      showNotification(`Item ${!currentStatus ? 'available' : 'unavailable'}`, 'info');
+    } catch (error) {
+      console.error("Error toggling status:", error);
+      showNotification("Error updating status", 'error');
+    }
+  }
+  
+  // ======================== ORDER STATUS MANAGEMENT ========================
+  async function updateOrderStatus(orderId, newStatus) {
+    try {
+      await updateDoc(doc(db, "orders", orderId), {
+        status: newStatus,
+        updatedBy: currentUser?.uid,
+        updatedByEmail: currentUser?.email,
+        updatedAt: serverTimestamp()
+      });
+      showNotification(`Order status updated to ${newStatus}`, 'success');
+    } catch (error) {
+      console.error("Error updating order:", error);
+      showNotification("Error updating order", 'error');
+    }
+  }
+  
+  // ======================== DEFAULT MENU FOR NEW RESTAURANT ========================
+  async function initializeDefaultMenuForRestaurant() {
+    if (!currentUser) return;
+    
+    try {
+      const menuRef = collection(db, "menu");
+      const existingItems = await getDocs(query(menuRef, where("restaurantId", "==", currentUser.uid)));
+      
+      if (existingItems.empty) {
+        console.log("📝 Initializing default menu for new restaurant...");
+        
+        const defaultMenu = [
+          { name: "🔥 Paneer Tikka", price: 220, category: "Starters", description: "Grilled cottage cheese with aromatic spices", image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=150&h=150&fit=crop", rating: 4.8, veg: true, popular: true },
+          { name: "🌯 Veg Spring Roll", price: 180, category: "Starters", description: "Crispy rolls with fresh vegetables", image: "https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=150&h=150&fit=crop", rating: 4.5, veg: true, popular: false },
+          { name: "🍗 Chicken 65", price: 280, category: "Starters", description: "Spicy deep-fried chicken", image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=150&h=150&fit=crop", rating: 4.9, veg: false, popular: true },
+          { name: "🍛 Chicken Biryani", price: 320, category: "Main Course", description: "Aromatic basmati rice with tender chicken", image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=150&h=150&fit=crop", rating: 4.9, veg: false, popular: true },
+          { name: "🥘 Veg Biryani", price: 250, category: "Main Course", description: "Fragrant rice with garden vegetables", image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=150&h=150&fit=crop", rating: 4.7, veg: true, popular: false },
+          { name: "🥖 Butter Naan", price: 45, category: "Breads", description: "Soft tandoori bread with butter", image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=150&h=150&fit=crop", rating: 4.7, veg: true, popular: false },
+          { name: "🥭 Mango Lassi", price: 90, category: "Beverages", description: "Sweet mango yogurt drink", image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=150&h=150&fit=crop", rating: 4.9, veg: true, popular: true },
+          { name: "🍨 Gulab Jamun", price: 80, category: "Desserts", description: "Soft milk dumplings in syrup", image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=150&h=150&fit=crop", rating: 4.9, veg: true, popular: true }
+        ];
+        
+        for (const item of defaultMenu) {
+          await addDoc(collection(db, "menu"), {
+            ...item,
+            restaurantId: currentUser.uid,
+            available: true,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+        }
+        console.log("✅ Default menu added for new restaurant!");
+        showNotification("Welcome! Default menu items added to your restaurant.", "success");
+      }
+    } catch (error) {
+      console.error("Error initializing menu:", error);
+    }
+  }
+  
+  // ======================== AUTHENTICATION FUNCTIONS ========================
+  async function loginUser(email, password) {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      currentUser = userCredential.user;
+      isLoggedIn = true;
+      
+      userRestaurantData = await getRestaurantProfile(currentUser.uid);
+      
+      localStorage.setItem('admin_logged', 'true');
+      localStorage.setItem('admin_email', email);
+      localStorage.setItem('restaurant_id', currentUser.uid);
+      
+      showNotification(`Welcome back, ${userRestaurantData?.name || email}!`, 'success');
+      
+      initializeDefaultMenuForRestaurant();
+      listenToMenu();
+      listenToOrders();
+      
+      currentView = 'dashboard';
+      render();
+      return true;
+    } catch (error) {
+      console.error("Login error:", error);
+      let errorMessage = "Login failed";
+      if (error.code === 'auth/user-not-found') errorMessage = "User not found. Please register first.";
+      else if (error.code === 'auth/wrong-password') errorMessage = "Wrong password.";
+      else errorMessage = error.message;
+      showNotification(errorMessage, 'error');
+      return false;
+    }
+  }
+  
+  async function registerUser(email, password, name, restaurantNameInput, address, phone) {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      currentUser = userCredential.user;
+      
+      await updateProfile(currentUser, { displayName: name });
+      
+      userRestaurantData = await createRestaurantProfile(currentUser.uid, restaurantNameInput, address, phone);
+      
+      isLoggedIn = true;
+      localStorage.setItem('admin_logged', 'true');
+      localStorage.setItem('admin_email', email);
+      localStorage.setItem('restaurant_id', currentUser.uid);
+      
+      showNotification(`Welcome ${name}! Your restaurant "${restaurantNameInput}" is ready.`, 'success');
+      
+      await initializeDefaultMenuForRestaurant();
+      listenToMenu();
+      listenToOrders();
+      
+      currentView = 'dashboard';
+      render();
+      return true;
+    } catch (error) {
+      console.error("Registration error:", error);
+      let errorMessage = "Registration failed";
+      if (error.code === 'auth/email-already-in-use') errorMessage = "Email already in use.";
+      else if (error.code === 'auth/weak-password') errorMessage = "Password should be at least 6 characters.";
+      else errorMessage = error.message;
+      showNotification(errorMessage, 'error');
+      return false;
+    }
+  }
+  
+  async function logoutUser() {
+    try {
+      await signOut(auth);
+      currentUser = null;
+      userRestaurantData = null;
+      isLoggedIn = false;
+      menuItems = [];
+      orders = [];
+      localStorage.removeItem('admin_logged');
+      localStorage.removeItem('admin_email');
+      localStorage.removeItem('restaurant_id');
+      showNotification('Logged out successfully', 'info');
+      render();
+    } catch (error) {
+      console.error("Logout error:", error);
+      showNotification("Error logging out", 'error');
+    }
+  }
+  
+  function checkAuthState() {
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        isLoggedIn = true;
+        userRestaurantData = await getRestaurantProfile(currentUser.uid);
+        localStorage.setItem('admin_logged', 'true');
+        localStorage.setItem('admin_email', user.email);
+        localStorage.setItem('restaurant_id', user.uid);
+        
+        initializeDefaultMenuForRestaurant();
+        listenToMenu();
+        listenToOrders();
+        currentView = 'dashboard';
+        render();
+      } else {
+        currentUser = null;
+        userRestaurantData = null;
+        isLoggedIn = false;
+        render();
+      }
+    });
+  }
+  
+  // ======================== STATISTICS ========================
+  function getStats() {
+    const totalOrders = orders.length;
+    const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+    const acceptedOrders = orders.filter(o => o.status === 'Accepted').length;
+    const preparingOrders = orders.filter(o => o.status === 'Preparing').length;
+    const readyOrders = orders.filter(o => o.status === 'Ready').length;
+    const servedOrders = orders.filter(o => o.status === 'Served').length;
+    const declinedOrders = orders.filter(o => o.status === 'Declined').length;
+    const totalRevenue = orders.filter(o => o.status !== 'Declined').reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const availableItems = menuItems.filter(i => i.available).length;
+    const unavailableItems = menuItems.filter(i => !i.available).length;
+    
+    return { totalOrders, pendingOrders, acceptedOrders, preparingOrders, readyOrders, servedOrders, declinedOrders, totalRevenue, availableItems, unavailableItems };
+  }
+  
+  function calculateTax(subtotal) {
+    let cgst = (subtotal * TAX_CONFIG.cgst.rate) / 100;
+    let sgst = (subtotal * TAX_CONFIG.sgst.rate) / 100;
+    let serviceCharge = (subtotal * TAX_CONFIG.serviceCharge.rate) / 100;
+    let totalTax = cgst + sgst + serviceCharge;
+    let grandTotal = subtotal + totalTax;
+    let roundOff = 0;
+    
+    if (TAX_CONFIG.roundOff) {
+      const rounded = Math.round(grandTotal);
+      roundOff = rounded - grandTotal;
+      grandTotal = rounded;
+    }
+    
+    return { subtotal, cgst, sgst, serviceCharge, totalTax, roundOff, grandTotal };
+  }
+  
+  // ======================== PRINT BILL FUNCTION ========================
   function printBill(order) {
     const printWindow = window.open('', '_blank');
-    const date = new Date(order.timestamp).toLocaleString();
+    const orderDate = new Date(order.timestamp).toLocaleString();
+    const orderTime = new Date(order.timestamp).toLocaleTimeString();
+    
     printWindow.document.write(`
-      <!DOCTYPE html><html><head><title>Bill #${order.id.slice(-6)}</title>
-      <style>body{font-family:Arial;padding:20px;}.bill{max-width:400px;margin:0 auto;}.header{text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:20px;}table{width:100%;border-collapse:collapse;}th,td{padding:8px;text-align:left;border-bottom:1px solid #ddd;}.total{font-weight:bold;margin-top:10px;}.footer{text-align:center;margin-top:30px;font-size:12px;color:#666;}</style>
-      </head><body><div class="bill"><div class="header"><h1>QR Dine Restaurant</h1><p>Digital Restaurant Bill</p></div>
-      <p><strong>Bill No:</strong> ${order.id.slice(-6)}</p><p><strong>Table:</strong> ${order.tableNumber}</p><p><strong>Date:</strong> ${date}</p>
-      <table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
-      ${order.items.map(item => `<tr><td>${item.name}</td><td>${item.quantity}</td><td>₹${item.price}</td><td>₹${item.price * item.quantity}</td></tr>`).join('')}
-      </tbody></table><div class="total"><p>Total: ₹${order.totalPrice}</p></div><div class="footer"><p>Thank you for dining with us!</p><p>** Computer generated bill **</p></div></div>
-      <script>window.print();setTimeout(function(){window.close();}, 1000);<\/script></body></html>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Bill #${order.billNumber}</title>
+        <style>
+          * { font-family: Arial, sans-serif; }
+          body { padding: 20px; }
+          .bill-container { max-width: 400px; margin: 0 auto; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+          .restaurant-name { font-size: 24px; font-weight: bold; margin: 0; }
+          .bill-title { font-size: 18px; margin: 5px 0; }
+          .bill-details { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+          th { background-color: #f5f5f5; }
+          .text-right { text-align: right; }
+          .total-section { border-top: 2px solid #333; margin-top: 10px; padding-top: 10px; }
+          .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; border-top: 1px solid #ddd; padding-top: 10px; }
+          .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+          .status-pending { background: #fef3c7; color: #92400e; }
+          .status-accepted { background: #dbeafe; color: #1e40af; }
+          .status-preparing { background: #fed7aa; color: #9a3412; }
+          .status-ready { background: #d1fae5; color: #065f46; }
+          .status-served { background: #dcfce7; color: #166534; }
+          .status-declined { background: #fee2e2; color: #991b1b; }
+        </style>
+      </head>
+      <body>
+        <div class="bill-container">
+          <div class="header">
+            <h1 class="restaurant-name">${order.restaurantName || userRestaurantData?.name || 'QR Dine'}</h1>
+            <p class="bill-title">Digital Restaurant Bill</p>
+          </div>
+          <div class="bill-details">
+            <span><strong>Bill No:</strong> ${order.billNumber}</span>
+            <span><strong>Table:</strong> ${order.tableNumber}</span>
+            <span><strong>Date:</strong> ${orderDate.split(',')[0]}</span>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Item</th><th>Qty</th><th class="text-right">Price</th><th class="text-right">Total</th></tr>
+            </thead>
+            <tbody>
+              ${order.items.map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${item.quantity}</td><td class="text-right">${formatCurrency(item.price)}</td><td class="text-right">${formatCurrency(item.price * item.quantity)}</td></tr>`).join('')}
+            </tbody>
+          </table>
+          <div class="total-section">
+            <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span>${formatCurrency(order.subtotal)}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span>CGST (2.5%):</span><span>${formatCurrency(order.cgst)}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span>SGST (2.5%):</span><span>${formatCurrency(order.sgst)}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;"><span>Service Charge (5%):</span><span>${formatCurrency(order.serviceCharge)}</span></div>
+            ${order.roundOff !== 0 ? `<div style="display: flex; justify-content: space-between; font-size: 12px;"><span>Round Off:</span><span>${order.roundOff > 0 ? '+' : ''}${formatCurrency(order.roundOff)}</span></div>` : ''}
+            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;"><span>Grand Total:</span><span>${formatCurrency(order.totalPrice)}</span></div>
+          </div>
+          <div class="footer">
+            <p>Thank you for dining with us!</p>
+            <p>Order Status: <span class="status status-${order.status.toLowerCase()}">${order.status}</span></p>
+            <p>** This is a computer generated bill **</p>
+          </div>
+        </div>
+        <script>window.print();setTimeout(function(){window.close();}, 1000);<\/script>
+      </body>
+      </html>
     `);
     printWindow.document.close();
   }
   
-  function getStats() {
-    const today = new Date().toDateString();
-    const todayOrders = orders.filter(o => new Date(o.timestamp).toDateString() === today);
-    const activeOrders = orders.filter(o => ['Pending', 'Preparing', 'Ready'].includes(o.status));
-    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
-    const monthlyRevenue = orderHistory.filter(o => new Date(o.date).getMonth() === selectedMonth).reduce((sum, o) => sum + o.totalPrice, 0);
-    const comparisonRevenue = orderHistory.filter(o => new Date(o.date).getMonth() === selectedMonth - 1).reduce((sum, o) => sum + o.totalPrice, 0);
-    const percentChange = comparisonRevenue ? ((monthlyRevenue - comparisonRevenue) / comparisonRevenue * 100).toFixed(1) : 0;
-    const popularItems = [...menuItems].sort((a,b) => (b.orders || 0) - (a.orders || 0)).slice(5);
-    const peakHours = { '12-1 PM': 15, '1-2 PM': 28, '7-8 PM': 45, '8-9 PM': 38, '9-10 PM': 22 };
-    
-    return { totalOrdersToday: todayOrders.length, activeOrders: activeOrders.length, revenueToday: todayOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0), peakHour: '8:00 PM', totalRevenue, monthlyRevenue, comparisonRevenue, percentChange, popularItems, peakHours, pendingRequests: serviceRequests.length };
+  // ======================== UI FUNCTIONS ========================
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        imagePreviewUrl = e.target.result;
+        const preview = document.getElementById('filePreview');
+        if (preview) {
+          preview.src = imagePreviewUrl;
+          preview.classList.remove('hidden');
+        }
+        const fileInfo = document.getElementById('fileInfo');
+        if (fileInfo) {
+          fileInfo.innerHTML = `<i class="fas fa-check-circle text-green-500"></i> ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+          fileInfo.classList.remove('hidden');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   }
   
-  function getFilteredOrders() {
-    const now = new Date();
-    let filtered = [...orderHistory];
-    if (dateFilter === 'today') filtered = filtered.filter(o => new Date(o.date).toDateString() === now.toDateString());
-    else if (dateFilter === 'week') { const weekAgo = new Date(now.setDate(now.getDate() - 7)); filtered = filtered.filter(o => new Date(o.date) >= weekAgo); }
-    else if (dateFilter === 'month') filtered = filtered.filter(o => new Date(o.date).getMonth() === selectedMonth && new Date(o.date).getFullYear() === selectedYear);
-    else if (dateFilter === 'year') filtered = filtered.filter(o => new Date(o.date).getFullYear() === selectedYear);
-    return filtered;
-  }
-  
-  function renderChart() {
-    const canvas = document.getElementById('salesChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const last7Days = [], salesData = [];
-    for (let i = 6; i >= 0; i--) { const date = new Date(); date.setDate(date.getDate() - i); last7Days.push(date.toLocaleDateString('en-US', { weekday: 'short' })); salesData.push(orderHistory.filter(o => new Date(o.date).toDateString() === date.toDateString()).reduce((s, o) => s + o.totalPrice, 0)); }
-    new Chart(ctx, { type: 'line', data: { labels: last7Days, datasets: [{ label: 'Sales (₹)', data: salesData, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => `₹${ctx.raw.toLocaleString()}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: (value) => '₹' + value.toLocaleString() } } } } });
-  }
-  
-  function showNotification(msg, type = 'success') { const toast = document.createElement('div'); toast.className = 'toast-notification'; toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'} mr-2"></i>${msg}`; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000); }
-  function formatCurrency(amount) { return '₹' + amount.toFixed(2); }
-  function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
-  
-  function login(email, password) {
-    if (email === 'admin@resto.com' && password === 'admin123') { currentUser = { email, role: 'admin' }; isLoggedIn = true; userRole = 'admin'; localStorage.setItem('admin_logged', 'true'); addLog('ADMIN_LOGIN', { email }); loadData(); render(); }
-    else if (email === 'staff@resto.com' && password === 'staff123') { currentUser = { email, role: 'staff' }; isLoggedIn = true; userRole = 'staff'; localStorage.setItem('admin_logged', 'true'); addLog('STAFF_LOGIN', { email }); loadData(); render(); }
-    else if (email === 'kitchen@resto.com' && password === 'kitchen123') { currentUser = { email, role: 'kitchen' }; isLoggedIn = true; userRole = 'kitchen'; localStorage.setItem('admin_logged', 'true'); addLog('KITCHEN_LOGIN', { email }); loadData(); render(); }
-    else showNotification('Invalid credentials', 'error');
-  }
-  function logout() { currentUser = null; isLoggedIn = false; localStorage.removeItem('admin_logged'); addLog('LOGOUT', {}); render(); }
-  function loadData() { loadOrders(); loadMenu(); loadServiceRequests(); }
-  function toggleDarkMode() { darkMode = !darkMode; localStorage.setItem('darkMode', darkMode); if (darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); render(); }
-  function toggleKitchenMode() { kitchenMode = !kitchenMode; if (kitchenMode) { document.body.classList.add('kitchen-mode'); currentView = 'orders'; } else { document.body.classList.remove('kitchen-mode'); } render(); }
-  
+  // ======================== RENDER FUNCTIONS ========================
   function renderLogin() {
-    return `<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100">
-      <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"><div class="text-center mb-6"><div class="inline-block bg-orange-100 rounded-full p-4 mb-4"><i class="fas fa-utensils text-5xl text-orange-600"></i></div><h2 class="text-2xl font-bold text-gray-800">QR Dine Admin</h2><p class="text-gray-500 text-sm">Restaurant Management System</p></div>
-      <div class="space-y-4"><input type="email" id="loginEmail" class="w-full border rounded-lg px-4 py-2" placeholder="admin@resto.com" value="admin@resto.com"><input type="password" id="loginPassword" class="w-full border rounded-lg px-4 py-2" placeholder="admin123" value="admin123"><button id="loginBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700">Login</button></div>
-      <div class="mt-4 text-center text-xs text-gray-500"><p>Demo Accounts:</p><p>Admin: admin@resto.com / admin123</p><p>Staff: staff@resto.com / staff123</p><p>Kitchen: kitchen@resto.com / kitchen123</p></div></div></div>`;
-  }
-  
-  function renderSidebar() {
-    const navItems = [
-      { id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard', roles: ['admin', 'staff'] },
-      { id: 'orders', icon: 'fa-clipboard-list', label: 'Live Orders', roles: ['admin', 'staff', 'kitchen'] },
-      { id: 'orderhistory', icon: 'fa-history', label: 'Order History', roles: ['admin', 'staff'] },
-      { id: 'tables', icon: 'fa-table', label: 'Table Map', roles: ['admin', 'staff'] },
-      { id: 'menu', icon: 'fa-utensils', label: 'Menu', roles: ['admin'] },
-      { id: 'analytics', icon: 'fa-chart-simple', label: 'Analytics', roles: ['admin'] },
-      { id: 'comparison', icon: 'fa-chart-line', label: 'Comparison', roles: ['admin'] },
-      { id: 'logs', icon: 'fa-history', label: 'Activity Logs', roles: ['admin'] }
-    ];
-    return `<div class="fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-20"><div class="p-6 border-b"><div class="flex items-center gap-2"><i class="fas fa-qrcode text-orange-500 text-2xl"></i><span class="font-bold text-xl text-gray-800">QR Dine</span></div><p class="text-xs text-gray-500 mt-1">Premium Admin</p></div>
-    <nav class="p-4 space-y-1">${navItems.filter(item => item.roles.includes(userRole)).map(item => `<button class="sidebar-nav w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${currentView === item.id ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50'}" data-view="${item.id}"><i class="fas ${item.icon} w-5"></i><span>${item.label}</span></button>`).join('')}</nav>
-    <div class="absolute bottom-0 left-0 right-0 p-4 border-t"><div class="flex items-center justify-between mb-3"><button id="darkModeToggle" class="text-gray-600 hover:text-orange-600"><i class="fas ${darkMode ? 'fa-sun' : 'fa-moon'}"></i></button><button id="kitchenModeToggle" class="text-gray-600 hover:text-orange-600"><i class="fas fa-utensils"></i> Kitchen Mode</button><button id="logoutBtn" class="text-red-600 hover:text-red-700"><i class="fas fa-sign-out-alt"></i></button></div><div class="text-xs text-gray-500 text-center"><i class="fas fa-user-circle mr-1"></i> ${currentUser?.email}<span class="mx-1">•</span><span class="capitalize">${userRole}</span></div></div></div>`;
+    return `
+      <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100 p-4">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+          <div class="text-center mb-6">
+            <div class="inline-block bg-orange-100 rounded-full p-4 mb-4">
+              <i class="fas fa-utensils text-5xl text-orange-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800">Multi-Restaurant Admin</h2>
+            <p class="text-gray-500 text-sm mt-1">Each restaurant has its own private data</p>
+          </div>
+          
+          <div id="loginForm">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" id="loginEmail" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500" placeholder="restaurant@email.com">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="loginPassword" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500" placeholder="••••••••">
+              </div>
+              <button id="loginBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700 transition">
+                <i class="fas fa-sign-in-alt mr-2"></i> Login
+              </button>
+              <p class="text-center text-sm text-gray-500">
+                New restaurant? 
+                <button id="showRegisterBtn" class="text-orange-600 hover:underline">Register your restaurant</button>
+              </p>
+            </div>
+          </div>
+          
+          <div id="registerForm" class="hidden">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Restaurant Name *</label>
+                <input type="text" id="restaurantName" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500" placeholder="My Restaurant">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Owner Name *</label>
+                <input type="text" id="ownerName" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500" placeholder="John Doe">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <input type="email" id="registerEmail" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500" placeholder="restaurant@email.com">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <input type="password" id="registerPassword" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500" placeholder="Min 6 characters">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <textarea id="restaurantAddress" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500" placeholder="Restaurant address"></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input type="tel" id="restaurantPhone" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500" placeholder="+91 98765 43210">
+              </div>
+              <button id="registerBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700 transition">
+                <i class="fas fa-user-plus mr-2"></i> Register Restaurant
+              </button>
+              <p class="text-center text-sm text-gray-500">
+                Already registered? 
+                <button id="showLoginBtn" class="text-orange-600 hover:underline">Login here</button>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   }
   
   function renderDashboard() {
     const stats = getStats();
-    setTimeout(() => renderChart(), 100);
-    return `<div class="p-6"><h1 class="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1><p class="text-gray-500 mb-6">Welcome back, ${currentUser?.email.split('@')[0]}</p>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6"><div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500 text-sm">Today's Orders</p><p class="text-3xl font-bold">${stats.totalOrdersToday}</p></div><i class="fas fa-receipt text-4xl text-orange-300"></i></div></div>
-    <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500 text-sm">Active Orders</p><p class="text-3xl font-bold text-yellow-600">${stats.activeOrders}</p></div><i class="fas fa-clock text-4xl text-yellow-300"></i></div></div>
-    <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500 text-sm">Today's Revenue</p><p class="text-3xl font-bold text-green-600">${formatCurrency(stats.revenueToday)}</p></div><i class="fas fa-rupee-sign text-4xl text-green-300"></i></div></div>
-    <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500 text-sm">Service Requests</p><p class="text-3xl font-bold text-red-600">${stats.pendingRequests}</p></div><i class="fas fa-bell text-4xl text-red-300"></i></div></div></div>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"><div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Sales Trend (Last 7 Days)</h3><div class="h-64"><canvas id="salesChart"></canvas></div><div class="mt-4 text-center text-sm text-gray-500"><i class="fas fa-chart-line text-orange-500"></i> Peak Hour: ${stats.peakHour}</div></div>
-    <div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Popular Items</h3><div class="space-y-3">${stats.popularItems.map(item => `<div><div class="flex justify-between mb-1"><span>${item.name}</span><span>${item.orders || 0} orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-orange-500 h-2 rounded-full" style="width: ${((item.orders || 0) / 60) * 100}%"></div></div></div>`).join('')}</div></div></div>
-    ${serviceRequests.length > 0 ? `<div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-bell text-orange-500"></i> Service Requests</h3><div class="space-y-2">${serviceRequests.map(req => `<div class="flex items-center justify-between p-3 bg-orange-50 rounded-lg"><div><i class="fas ${req.type === 'waiter' ? 'fa-user' : 'fa-tint'} mr-2"></i> Table ${req.tableNumber} requested ${req.type}</div><button class="resolveReqBtn bg-green-500 text-white px-3 py-1 rounded text-sm" data-id="${req.id}">Resolve</button></div>`).join('')}</div></div>` : ''}
-    <button id="addTestOrderBtn" class="mt-4 w-full bg-orange-50 text-orange-600 py-3 rounded-lg font-medium hover:bg-orange-100">+ Simulate Test Order</button></div>`;
-  }
-  
-  function renderOrders() {
-    const pending = orders.filter(o => o.status === 'Pending');
-    const preparing = orders.filter(o => o.status === 'Preparing');
-    const ready = orders.filter(o => o.status === 'Ready');
-    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Live Orders</h1><p class="text-gray-500">Real-time order management</p></div>${!kitchenMode ? `<button id="addTestOrderBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">+ New Test Order</button>` : ''}</div>
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="bg-yellow-500 text-white p-3"><h3 class="font-bold">Pending (${pending.length})</h3></div><div class="p-3 space-y-3 max-h-96 overflow-y-auto">${pending.map(order => `<div class="order-card border rounded-lg p-3"><div class="flex justify-between mb-2"><span class="font-bold text-lg">Table ${order.tableNumber}</span><span class="text-xs text-gray-400">${order.elapsed}</span></div><div class="space-y-1 mb-3">${order.items.map(item => `<div class="flex justify-between text-sm"><span>${item.name} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}</div><div class="flex gap-2"><button class="acceptOrderBtn bg-green-500 text-white px-3 py-1.5 rounded text-sm flex-1" data-id="${order.id}"><i class="fas fa-check mr-1"></i> Accept</button><button class="declineOrderBtn bg-red-500 text-white px-3 py-1.5 rounded text-sm flex-1" data-id="${order.id}"><i class="fas fa-times mr-1"></i> Decline</button><button class="printOrderBtn bg-gray-500 text-white px-3 py-1.5 rounded text-sm" data-order='${JSON.stringify(order)}'><i class="fas fa-print"></i></button></div></div>`).join('')}${pending.length === 0 ? '<div class="text-center py-8 text-gray-500">No pending orders</div>' : ''}</div></div>
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="bg-blue-500 text-white p-3"><h3 class="font-bold">Preparing (${preparing.length})</h3></div><div class="p-3 space-y-3 max-h-96 overflow-y-auto">${preparing.map(order => `<div class="order-card border rounded-lg p-3"><div class="flex justify-between mb-2"><span class="font-bold">Table ${order.tableNumber}</span><span class="text-xs text-gray-400">${order.elapsed}</span></div><div class="text-sm mb-3">${order.items.map(i => i.name).join(', ')}</div><button class="readyOrderBtn bg-blue-600 text-white px-3 py-1.5 rounded text-sm w-full" data-id="${order.id}"><i class="fas fa-bell mr-1"></i> Mark Ready</button></div>`).join('')}${preparing.length === 0 ? '<div class="text-center py-8 text-gray-500">No orders preparing</div>' : ''}</div></div>
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="bg-green-500 text-white p-3"><h3 class="font-bold">Ready (${ready.length})</h3></div><div class="p-3 space-y-3 max-h-96 overflow-y-auto">${ready.map(order => `<div class="order-card border rounded-lg p-3"><div class="flex justify-between mb-2"><span class="font-bold">Table ${order.tableNumber}</span><span class="text-xs text-gray-400">${order.elapsed}</span></div><div class="text-sm mb-3">${order.items.map(i => i.name).join(', ')}</div><button class="serveOrderBtn bg-emerald-600 text-white px-3 py-1.5 rounded text-sm w-full" data-id="${order.id}"><i class="fas fa-check-double mr-1"></i> Serve</button></div>`).join('')}${ready.length === 0 ? '<div class="text-center py-8 text-gray-500">No ready orders</div>' : ''}</div></div></div></div>`;
-  }
-  
-  function renderOrderHistory() {
-    const filtered = getFilteredOrders();
-    const monthlyTotal = filtered.reduce((s, o) => s + o.totalPrice, 0);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Order History</h1><p class="text-gray-500 mb-6">View and analyze order history</p>
-    <div class="bg-white rounded-xl shadow-sm p-5 mb-6"><div class="flex flex-wrap gap-4 items-center justify-between"><div class="flex gap-2"><button class="date-filter-btn px-4 py-2 rounded-lg text-sm ${dateFilter === 'today' ? 'bg-orange-600 text-white' : 'bg-gray-100'}" data-filter="today">Today</button><button class="date-filter-btn px-4 py-2 rounded-lg text-sm ${dateFilter === 'week' ? 'bg-orange-600 text-white' : 'bg-gray-100'}" data-filter="week">This Week</button><button class="date-filter-btn px-4 py-2 rounded-lg text-sm ${dateFilter === 'month' ? 'bg-orange-600 text-white' : 'bg-gray-100'}" data-filter="month">This Month</button><button class="date-filter-btn px-4 py-2 rounded-lg text-sm ${dateFilter === 'year' ? 'bg-orange-600 text-white' : 'bg-gray-100'}" data-filter="year">This Year</button></div>
-    <div class="flex gap-2"><select id="monthSelect" class="border rounded-lg px-3 py-2 text-sm"><option value="0">January</option><option value="1">February</option><option value="2">March</option><option value="3">April</option><option value="4">May</option><option value="5">June</option><option value="6">July</option><option value="7">August</option><option value="8">September</option><option value="9">October</option><option value="10">November</option><option value="11">December</option></select>
-    <select id="yearSelect" class="border rounded-lg px-3 py-2 text-sm"><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option></select></div></div></div>
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3 text-left">Date</th><th class="px-4 py-3 text-left">Order ID</th><th class="px-4 py-3 text-left">Items</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3 text-center">Action</th></tr></thead>
-    <tbody>${filtered.map(order => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-2 text-sm">${new Date(order.date).toLocaleDateString()}</td><td class="px-4 py-2 text-sm font-medium">${order.id}</td><td class="px-4 py-2 text-sm">${order.items || 3} items</td><td class="px-4 py-2 text-sm text-right font-semibold">${formatCurrency(order.totalPrice)}</td><td class="px-4 py-2 text-center"><button class="viewOrderBtn text-orange-600 text-sm" data-order='${JSON.stringify(order)}'>View Details</button></td></tr>`).join('')}</tbody></table>
-    <div class="p-4 border-t bg-gray-50"><div class="flex justify-between items-center"><span class="font-semibold">Total for selected period:</span><span class="text-2xl font-bold text-orange-600">${formatCurrency(monthlyTotal)}</span></div></div></div></div>`;
-  }
-  
-  function renderTableMap() {
-    const occupied = getTableStatus().filter(t => t.status === 'occupied');
-    const free = getTableStatus().filter(t => t.status === 'free');
-    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Table Map</h1><p class="text-gray-500 mb-6">Visual table management</p>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"><div class="bg-white rounded-xl p-4"><h3 class="font-bold text-red-600 mb-3"><i class="fas fa-chair mr-2"></i> Occupied Tables (${occupied.length})</h3><div class="flex flex-wrap gap-2">${occupied.map(t => `<div class="bg-red-100 text-red-700 px-3 py-2 rounded-lg font-semibold">Table ${t.id}</div>`).join('')}</div></div>
-    <div class="bg-white rounded-xl p-4"><h3 class="font-bold text-green-600 mb-3"><i class="fas fa-chair mr-2"></i> Free Tables (${free.length})</h3><div class="flex flex-wrap gap-2">${free.map(t => `<div class="bg-green-100 text-green-700 px-3 py-2 rounded-lg font-semibold">Table ${t.id}</div>`).join('')}</div></div></div>
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">${getTableStatus().map(table => `<div class="bg-white rounded-xl shadow-sm p-4 text-center cursor-pointer hover:shadow-md transition" data-table="${table.id}"><div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-3 ${table.status === 'occupied' ? 'bg-orange-100' : 'bg-green-100'}"><i class="fas fa-chair text-2xl ${table.status === 'occupied' ? 'text-orange-600' : 'text-green-600'}"></i></div><h3 class="font-bold text-lg">Table ${table.id}</h3><p class="text-xs ${table.status === 'occupied' ? 'text-orange-600' : 'text-green-600'} font-medium">${table.status === 'occupied' ? 'Occupied' : 'Free'}</p>${table.currentOrder ? `<p class="text-xs text-gray-500 mt-1">Order #${table.currentOrder.id.slice(-6)}</p>` : ''}</div>`).join('')}</div></div>`;
+    const recentOrders = orders.slice(0, 5);
+    
+    return `
+      <div class="p-6">
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-800">${userRestaurantData?.name || 'Restaurant'} Dashboard</h1>
+            <p class="text-gray-500 text-sm mt-1">Welcome, ${currentUser?.displayName || currentUser?.email} • Private Data</p>
+          </div>
+          <div class="flex gap-3">
+            <div class="bg-orange-100 rounded-lg px-3 py-2 flex items-center gap-2">
+              <i class="fas fa-store text-orange-600"></i>
+              <span class="text-sm text-orange-700">${userRestaurantData?.name || 'Your Restaurant'}</span>
+            </div>
+            <button id="taxSettingsBtn" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition">
+              <i class="fas fa-percent mr-2"></i> Tax
+            </button>
+            <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+              <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </button>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+          <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500">Total Orders</p><p class="text-3xl font-bold">${stats.totalOrders}</p></div><i class="fas fa-receipt text-4xl text-orange-300"></i></div></div>
+          <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500">Pending</p><p class="text-3xl font-bold text-yellow-600">${stats.pendingOrders}</p></div><i class="fas fa-clock text-4xl text-yellow-300"></i></div></div>
+          <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500">Revenue</p><p class="text-3xl font-bold text-green-600">${formatCurrency(stats.totalRevenue)}</p></div><i class="fas fa-rupee-sign text-4xl text-green-300"></i></div></div>
+          <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500">Menu Items</p><p class="text-3xl font-bold">${stats.availableItems}/${stats.availableItems+stats.unavailableItems}</p></div><i class="fas fa-utensils text-4xl text-orange-300"></i></div></div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white cursor-pointer hover:shadow-xl transition" id="goToMenuBtn">
+            <h3 class="text-xl font-bold mb-2">🍽️ My Menu</h3>
+            <p class="text-orange-100 text-sm mb-4">Manage your restaurant's menu items</p>
+            <div class="inline-block bg-white text-orange-600 px-4 py-2 rounded-lg font-semibold"><i class="fas fa-edit mr-2"></i> Manage Menu</div>
+          </div>
+          <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white cursor-pointer hover:shadow-xl transition" id="goToOrdersBtn">
+            <h3 class="text-xl font-bold mb-2">📦 My Orders</h3>
+            <p class="text-blue-100 text-sm mb-4">Track orders for your restaurant</p>
+            <div class="inline-block bg-white text-blue-600 px-4 py-2 rounded-lg font-semibold"><i class="fas fa-truck-fast mr-2"></i> View Orders</div>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-sm p-6">
+          <h2 class="font-bold mb-4">📋 Recent Orders</h2>
+          ${recentOrders.length === 0 ? '<div class="text-center py-8"><i class="fas fa-shopping-bag text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No orders yet for your restaurant</p></div>' : `
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              ${recentOrders.map(order => `
+                <div class="order-row border rounded-lg p-4 flex flex-wrap justify-between items-center gap-3">
+                  <div><p class="font-semibold">Bill #${order.billNumber || '0001'}</p><p class="text-sm text-gray-500">Table ${order.tableNumber}</p></div>
+                  <div><p>${order.items?.length || 0} items</p><p class="text-orange-600 font-bold">${formatCurrency(order.totalPrice)}</p></div>
+                  <div><span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Accepted' ? 'bg-blue-100 text-blue-700' : order.status === 'Preparing' ? 'bg-purple-100 text-purple-700' : order.status === 'Ready' ? 'bg-green-100 text-green-700' : order.status === 'Served' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${order.status}</span></div>
+                  <div class="flex gap-2">
+                    ${order.status === 'Pending' ? `<button class="acceptOrderBtn bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600" data-id="${order.id}">Accept</button>` : ''}
+                    ${order.status === 'Pending' ? `<button class="declineOrderBtn bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600" data-id="${order.id}">Decline</button>` : ''}
+                    ${order.status === 'Accepted' ? `<button class="prepareOrderBtn bg-purple-500 text-white px-3 py-1 rounded text-xs hover:bg-purple-600" data-id="${order.id}">Prepare</button>` : ''}
+                    ${order.status === 'Preparing' ? `<button class="readyOrderBtn bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600" data-id="${order.id}">Mark Ready</button>` : ''}
+                    ${order.status === 'Ready' ? `<button class="serveOrderBtn bg-emerald-500 text-white px-3 py-1 rounded text-xs hover:bg-emerald-600" data-id="${order.id}">Serve</button>` : ''}
+                    ${order.status !== 'Declined' && order.status !== 'Served' ? `<button class="printOrderBtn bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600" data-order='${JSON.stringify(order)}'><i class="fas fa-print"></i> Print</button>` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
+      </div>
+    `;
   }
   
   function renderMenuManagement() {
-    const stats = getStats();
-    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Menu Management</h1><p class="text-gray-500">${menuItems.length} items total</p></div><button id="addMenuItemBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Item</button></div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${menuItems.map(item => `<div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="p-4 border-b flex justify-between items-center"><div class="flex items-center gap-2"><span class="text-2xl">${item.image || '🍽️'}</span><h3 class="font-bold">${escapeHtml(item.name)}</h3></div><span class="text-orange-600 font-bold">${formatCurrency(item.price)}</span></div><div class="p-4"><p class="text-sm text-gray-500 mb-2">${item.category}</p><div class="flex items-center gap-3 mb-3"><span class="text-xs ${item.veg ? 'text-green-600' : 'text-red-600'}"><i class="fas ${item.veg ? 'fa-leaf' : 'fa-drumstick'}"></i> ${item.veg ? 'Veg' : 'Non-Veg'}</span><span class="text-xs text-gray-500"><i class="far fa-clock"></i> ${item.prepTime} min</span><span class="text-xs ${item.available ? 'text-green-600' : 'text-red-600'}">${item.available ? 'In Stock' : 'Out of Stock'}</span></div><div class="flex gap-2"><button class="editMenuItemBtn flex-1 bg-gray-100 text-gray-700 py-2 rounded text-sm" data-id="${item.id}">Edit</button><button class="toggleAvailBtn flex-1 ${item.available ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'} py-2 rounded text-sm" data-id="${item.id}" data-available="${item.available}">${item.available ? 'Block' : 'Unblock'}</button><button class="deleteMenuItemBtn bg-red-100 text-red-600 px-3 py-2 rounded text-sm" data-id="${item.id}" data-name="${escapeHtml(item.name)}"><i class="fas fa-trash"></i></button></div></div></div>`).join('')}</div></div>`;
-  }
-  
-  function renderAnalytics() {
-    const stats = getStats();
-    const monthlyData = [12000, 15000, 18000, 22000, 25000, 28000, 32000, 35000, 38000, 42000, 45000, 48000];
-    setTimeout(() => {
-      const ctx = document.getElementById('monthlyChart')?.getContext('2d');
-      if (ctx) new Chart(ctx, { type: 'bar', data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], datasets: [{ label: 'Monthly Revenue (₹)', data: monthlyData, backgroundColor: '#f97316', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => `₹${ctx.raw.toLocaleString()}` } } } } });
-    }, 100);
-    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Analytics</h1><p class="text-gray-500 mb-6">Sales insights and performance metrics</p>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"><div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Monthly Performance (${new Date().getFullYear()})</h3><div class="h-80"><canvas id="monthlyChart"></canvas></div></div>
-    <div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Top Performing Items</h3><div class="space-y-4">${stats.popularItems.map((item, i) => `<div><div class="flex justify-between mb-1"><span>${i+1}. ${item.name}</span><span class="font-semibold">${item.orders || 0} orders</span></div><div class="w-full bg-gray-200 rounded-full h-3"><div class="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full" style="width: ${((item.orders || 0) / 60) * 100}%"></div></div></div>`).join('')}</div></div></div>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Peak Hours Analysis</h3>${Object.entries(stats.peakHours).map(([hour, count]) => `<div><div class="flex justify-between mb-1"><span>${hour}</span><span>${count} orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-purple-500 h-2 rounded-full" style="width: ${(count / 45) * 100}%"></div></div></div>`).join('')}</div>
-    <div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Revenue Insights</h3><div class="space-y-4"><div class="flex justify-between items-center p-3 bg-green-50 rounded-lg"><div><p class="text-sm text-gray-600">Total Revenue (Year)</p><p class="text-2xl font-bold text-green-600">${formatCurrency(stats.totalRevenue)}</p></div><i class="fas fa-chart-line text-3xl text-green-400"></i></div>
-    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg"><div><p class="text-sm text-gray-600">Average Order Value</p><p class="text-2xl font-bold text-blue-600">${formatCurrency(stats.totalRevenue / (orders.length || 1))}</p></div><i class="fas fa-chart-simple text-3xl text-blue-400"></i></div></div></div></div></div>`;
-  }
-  
-  function renderComparison() {
-    const stats = getStats();
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const currentYearData = [12000, 15000, 18000, 22000, 25000, 28000, 32000, 35000, 38000, 42000, 45000, 48000];
-    const lastYearData = [10000, 13000, 15000, 18000, 20000, 23000, 25000, 28000, 30000, 33000, 35000, 38000];
-    setTimeout(() => {
-      const ctx = document.getElementById('comparisonChart')?.getContext('2d');
-      if (ctx) new Chart(ctx, { type: 'line', data: { labels: months, datasets: [{ label: 'This Year', data: currentYearData, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.4 }, { label: 'Last Year', data: lastYearData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ₹${ctx.raw.toLocaleString()}` } } } } });
-    }, 100);
-    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Year-over-Year Comparison</h1><p class="text-gray-500 mb-6">Compare performance across periods</p>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6"><div class="bg-white rounded-xl shadow-sm p-5 text-center"><p class="text-gray-500">This Month vs Last Month</p><p class="text-3xl font-bold ${stats.percentChange >= 0 ? 'text-green-600' : 'text-red-600'}">${stats.percentChange >= 0 ? '+' : ''}${stats.percentChange}%</p><p class="text-sm text-gray-500 mt-1">${formatCurrency(stats.monthlyRevenue)} vs ${formatCurrency(stats.comparisonRevenue)}</p></div>
-    <div class="bg-white rounded-xl shadow-sm p-5 text-center"><p class="text-gray-500">Best Performing Month</p><p class="text-3xl font-bold text-green-600">December</p><p class="text-sm text-gray-500 mt-1">${formatCurrency(48000)} revenue</p></div>
-    <div class="bg-white rounded-xl shadow-sm p-5 text-center"><p class="text-gray-500">Growth Rate</p><p class="text-3xl font-bold text-blue-600">+26%</p><p class="text-sm text-gray-500 mt-1">Year over year</p></div></div>
-    <div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Revenue Comparison (This Year vs Last Year)</h3><div class="h-96"><canvas id="comparisonChart"></canvas></div></div></div>`;
-  }
-  
-  function renderLogs() {
-    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Activity Logs</h1><p class="text-gray-500 mb-6">System activity tracking</p>
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3 text-left text-sm">Timestamp</th><th class="px-4 py-3 text-left text-sm">Action</th><th class="px-4 py-3 text-left text-sm">Details</th><th class="px-4 py-3 text-left text-sm">User</th></tr></thead>
-    <tbody>${activityLogs.slice(0, 50).map(log => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-2 text-sm">${new Date(log.timestamp).toLocaleString()}</td><td class="px-4 py-2 text-sm font-medium">${log.action}</td><td class="px-4 py-2 text-sm text-gray-600">${typeof log.details === 'object' ? JSON.stringify(log.details) : log.details}</td><td class="px-4 py-2 text-sm">${log.user}</td></tr>`).join('')}</tbody></table>${activityLogs.length === 0 ? '<div class="text-center py-8 text-gray-500">No logs yet</div>' : ''}</div></div></div>`;
-  }
-  
-  function renderMainContent() {
-    switch(currentView) {
-      case 'dashboard': return renderDashboard();
-      case 'orders': return renderOrders();
-      case 'orderhistory': return renderOrderHistory();
-      case 'tables': return renderTableMap();
-      case 'menu': return renderMenuManagement();
-      case 'analytics': return renderAnalytics();
-      case 'comparison': return renderComparison();
-      case 'logs': return renderLogs();
-      default: return renderDashboard();
+    if (isLoading) {
+      return `<div class="min-h-screen flex items-center justify-center"><div class="text-center"><div class="loading-spinner mx-auto"></div><p class="mt-4">Loading your menu...</p></div></div>`;
     }
+    
+    const stats = getStats();
+    
+    return `
+      <div class="p-6">
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex flex-wrap justify-between items-center gap-4">
+          <div><button id="backToDashboard" class="text-gray-600 hover:text-orange-600 mr-4"><i class="fas fa-arrow-left"></i> Back</button><h1 class="text-2xl font-bold inline-block">My Menu</h1><p class="text-gray-500 text-sm mt-1">${stats.availableItems} available • ${stats.unavailableItems} unavailable • ${userRestaurantData?.name || 'Your Restaurant'}</p></div>
+          <button id="addItemBtn" class="bg-orange-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-orange-700"><i class="fas fa-plus mr-2"></i> Add New Item</button>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          ${menuItems.map(item => `
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden menu-card">
+              <div class="relative h-48 bg-gray-100">
+                <img src="${item.image}" class="menu-image" onerror="this.src='https://placehold.co/400x200/e2e8f0/475569?text=No+Image'">
+                <div class="absolute top-2 right-2"><span class="px-2 py-1 rounded-full text-xs font-semibold ${item.available ? 'badge-available' : 'badge-unavailable'}">${item.available ? 'Available' : 'Unavailable'}</span></div>
+              </div>
+              <div class="p-4">
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>
+                      <h3 class="font-bold text-lg">${escapeHtml(item.name)}</h3>
+                    </div>
+                    <p class="text-xs text-gray-500">${item.category}</p>
+                  </div>
+                  <p class="text-orange-600 font-bold text-xl">${formatCurrency(item.price)}</p>
+                </div>
+                <p class="text-gray-500 text-sm mb-4">${escapeHtml(item.description || 'No description')}</p>
+                <div class="flex gap-2">
+                  <button class="editItemBtn flex-1 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm hover:bg-gray-200" data-id="${item.id}"><i class="fas fa-edit mr-1"></i> Edit</button>
+                  <button class="toggleAvailBtn flex-1 ${item.available ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'} px-3 py-2 rounded-lg text-sm" data-id="${item.id}" data-available="${item.available}"><i class="fas ${item.available ? 'fa-ban' : 'fa-check'} mr-1"></i> ${item.available ? 'Block' : 'Unblock'}</button>
+                  <button class="deleteItemBtn bg-red-100 text-red-600 px-3 py-2 rounded-lg text-sm" data-id="${item.id}" data-name="${escapeHtml(item.name)}"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="mt-2 text-xs">
+                  <span class="${item.veg ? 'veg-badge' : 'nonveg-badge'} px-2 py-0.5 rounded-full">${item.veg ? 'Vegetarian' : 'Non-Vegetarian'}</span>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        ${menuItems.length === 0 ? '<div class="text-center py-12 bg-white rounded-xl mt-5"><i class="fas fa-utensils text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No menu items yet. Click "Add New Item" to get started!</p></div>' : ''}
+      </div>
+    `;
+  }
+  
+  function renderOrdersManagement() {
+    const pending = orders.filter(o => o.status === 'Pending');
+    const accepted = orders.filter(o => o.status === 'Accepted');
+    const preparing = orders.filter(o => o.status === 'Preparing');
+    const ready = orders.filter(o => o.status === 'Ready');
+    const completed = orders.filter(o => o.status === 'Served');
+    const declined = orders.filter(o => o.status === 'Declined');
+    
+    let ordersToShow = [];
+    if (currentTab === 'pending') ordersToShow = pending;
+    else if (currentTab === 'accepted') ordersToShow = accepted;
+    else if (currentTab === 'preparing') ordersToShow = preparing;
+    else if (currentTab === 'ready') ordersToShow = ready;
+    else if (currentTab === 'completed') ordersToShow = completed;
+    else if (currentTab === 'declined') ordersToShow = declined;
+    
+    return `
+      <div class="p-6">
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6"><button id="backToDashboardOrders" class="text-gray-600 hover:text-orange-600 mr-4"><i class="fas fa-arrow-left"></i> Back</button><h1 class="text-2xl font-bold inline-block">My Orders</h1><p class="text-gray-500 text-sm mt-1">Orders for ${userRestaurantData?.name || 'your restaurant'}</p></div>
+        <div class="flex gap-2 mb-6 border-b overflow-x-auto pb-2">
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'pending' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="pending">Pending (${pending.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'accepted' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="accepted">Accepted (${accepted.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'preparing' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="preparing">Preparing (${preparing.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'ready' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="ready">Ready (${ready.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'completed' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="completed">Completed (${completed.length})</button>
+          <button class="order-tab px-4 py-2 font-medium text-sm ${currentTab === 'declined' ? 'text-orange-600 border-b-2 border-orange-600' : 'text-gray-500'}" data-tab="declined">Declined (${declined.length})</button>
+        </div>
+        <div class="space-y-4">
+          ${ordersToShow.length === 0 ? '<div class="bg-white rounded-xl p-12 text-center"><i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No orders in this category</p></div>' : ordersToShow.map(order => `
+            <div class="bg-white rounded-xl shadow-sm p-5 order-row">
+              <div class="flex justify-between items-start mb-4 flex-wrap gap-3">
+                <div>
+                  <h3 class="font-bold">Bill #${order.billNumber || '0001'}</h3>
+                  <p class="text-sm text-gray-500">Table ${order.tableNumber} • ${new Date(order.timestamp).toLocaleString()}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-2xl font-bold text-orange-600">${formatCurrency(order.totalPrice)}</p>
+                  <span class="px-3 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Accepted' ? 'bg-blue-100 text-blue-700' : order.status === 'Preparing' ? 'bg-purple-100 text-purple-700' : order.status === 'Ready' ? 'bg-green-100 text-green-700' : order.status === 'Served' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}">${order.status}</span>
+                </div>
+              </div>
+              <div class="border-t pt-3 mb-3">
+                <p class="font-medium mb-2">Items:</p>
+                <div class="space-y-1">
+                  ${order.items.map(item => `<div class="flex justify-between text-sm"><span>${escapeHtml(item.name)} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2 pt-2">
+                ${order.status === 'Pending' ? `
+                  <button class="acceptOrderBtn bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition" data-id="${order.id}"><i class="fas fa-check mr-1"></i> Accept Order</button>
+                  <button class="declineOrderBtn bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition" data-id="${order.id}"><i class="fas fa-times mr-1"></i> Decline Order</button>
+                ` : ''}
+                ${order.status === 'Accepted' ? `
+                  <button class="prepareOrderBtn bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-600 transition" data-id="${order.id}"><i class="fas fa-fire mr-1"></i> Start Preparing</button>
+                ` : ''}
+                ${order.status === 'Preparing' ? `
+                  <button class="readyOrderBtn bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition" data-id="${order.id}"><i class="fas fa-bell mr-1"></i> Mark as Ready</button>
+                ` : ''}
+                ${order.status === 'Ready' ? `
+                  <button class="serveOrderBtn bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition" data-id="${order.id}"><i class="fas fa-check-double mr-1"></i> Serve Order</button>
+                ` : ''}
+                ${order.status !== 'Declined' && order.status !== 'Served' ? `
+                  <button class="printOrderBtn bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-600 transition" data-order='${JSON.stringify(order)}'><i class="fas fa-print mr-1"></i> Print Bill</button>
+                ` : ''}
+                ${order.status === 'Declined' ? `
+                  <button class="deleteOrderBtn bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition" data-id="${order.id}"><i class="fas fa-trash mr-1"></i> Remove</button>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  
+  function renderTaxModal() {
+    if (!showTaxModal) return '';
+    return `
+      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" id="taxModalOverlay">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+          <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold"><i class="fas fa-percent text-orange-600 mr-2"></i> Tax Settings</h2><button id="closeTaxModal" class="text-gray-400 text-2xl">&times;</button></div>
+          <div class="space-y-4">
+            <div class="border-b pb-3"><h3 class="font-semibold mb-2">GST Settings</h3>
+              <label class="flex justify-between py-2"><span>CGST (2.5%)</span><input type="checkbox" id="cgstEnabled" ${TAX_CONFIG.cgst.enabled ? 'checked' : ''}></label>
+              <label class="flex justify-between py-2"><span>SGST (2.5%)</span><input type="checkbox" id="sgstEnabled" ${TAX_CONFIG.sgst.enabled ? 'checked' : ''}></label>
+            </div>
+            <div class="border-b pb-3"><h3 class="font-semibold mb-2">Additional Charges</h3>
+              <label class="flex justify-between py-2"><span>Service Charge (5%)</span><input type="checkbox" id="serviceChargeEnabled" ${TAX_CONFIG.serviceCharge.enabled ? 'checked' : ''}></label>
+            </div>
+            <div><label class="flex justify-between py-2"><span>Round Off to Nearest Rupee</span><input type="checkbox" id="roundOffEnabled" ${TAX_CONFIG.roundOff ? 'checked' : ''}></label></div>
+          </div>
+          <div class="flex gap-3 mt-6"><button id="saveTaxBtn" class="flex-1 bg-orange-600 text-white py-2 rounded-lg font-semibold">Save Settings</button><button id="cancelTaxBtn" class="flex-1 bg-gray-100 py-2 rounded-lg">Cancel</button></div>
+        </div>
+      </div>
+    `;
+  }
+  
+  function renderAddEditModal() {
+    if (!showModal) return '';
+    const isEditing = editingItem !== null;
+    const item = editingItem || {};
+    
+    return `
+      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" id="modalOverlay">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">${isEditing ? '✏️ Edit Item' : '➕ Add New Item'}</h2><button id="closeModalBtn" class="text-gray-400 text-2xl">&times;</button></div>
+          <div class="space-y-4">
+            <div><label class="block text-sm font-medium mb-1">Item Name *</label><input type="text" id="itemName" class="w-full border rounded-lg px-3 py-2" placeholder="Butter Chicken" value="${escapeHtml(item.name || '')}"></div>
+            <div><label class="block text-sm font-medium mb-1">Price (₹) *</label><input type="number" id="itemPrice" class="w-full border rounded-lg px-3 py-2" placeholder="299" value="${item.price || ''}"></div>
+            <div><label class="block text-sm font-medium mb-1">Category</label><select id="itemCategory" class="w-full border rounded-lg px-3 py-2">${categories.map(c => `<option value="${c}" ${item.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+            <div><label class="block text-sm font-medium mb-1">Description</label><textarea id="itemDescription" rows="3" class="w-full border rounded-lg px-3 py-2" placeholder="Brief description">${escapeHtml(item.description || '')}</textarea></div>
+            
+            <div>
+              <label class="block text-sm font-medium mb-2">Food Type *</label>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="foodType" value="veg" ${(item.veg !== undefined ? item.veg : selectedVegStatus) ? 'checked' : ''} class="w-4 h-4 text-green-600">
+                  <span class="veg-dot green"></span>
+                  <span class="font-medium">Vegetarian</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="foodType" value="nonveg" ${(item.veg !== undefined ? !item.veg : !selectedVegStatus) ? 'checked' : ''} class="w-4 h-4 text-red-600">
+                  <span class="veg-dot red"></span>
+                  <span class="font-medium">Non-Vegetarian</span>
+                </label>
+              </div>
+            </div>
+            
+            <div><label class="block text-sm font-medium mb-1">Upload Image</label><input type="file" id="itemFile" accept="image/*" class="w-full border rounded-lg px-3 py-2"><div class="mt-2"><img id="filePreview" src="${item.image || ''}" class="image-preview ${item.image ? '' : 'hidden'}" onerror="this.src='https://placehold.co/120x120/e2e8f0/475569?text=No+Image'"><div id="fileInfo" class="text-xs text-gray-500 mt-1 ${!item.image ? 'hidden' : ''}"></div></div>${isCompressing ? `<div class="mt-2"><div class="bg-gray-200 rounded-full h-2"><div class="bg-orange-600 h-2 rounded-full compress-progress" style="width: ${compressProgress}%"></div></div><p class="text-xs text-gray-500 mt-1">Compressing: ${compressProgress}%</p></div>` : ''}<p class="text-xs text-gray-400 mt-2"><i class="fas fa-info-circle"></i> Images compressed to under 400KB</p></div>
+          </div>
+          <div class="flex gap-3 mt-6"><button id="saveItemBtn" class="flex-1 bg-orange-600 text-white py-2 rounded-lg font-semibold" ${isCompressing ? 'disabled' : ''}><i class="fas fa-save mr-2"></i> ${isEditing ? 'Update Item' : 'Add Item'}</button><button id="cancelModalBtn" class="flex-1 bg-gray-100 py-2 rounded-lg">Cancel</button></div>
+        </div>
+      </div>
+    `;
   }
   
   function render() {
-    const root = document.getElementById('admin-dashboard');
+    const root = document.getElementById('admin-root');
     if (!root) return;
-    if (!isLoggedIn) { root.innerHTML = renderLogin(); document.getElementById('loginBtn')?.addEventListener('click', () => { const email = document.getElementById('loginEmail')?.value; const pwd = document.getElementById('loginPassword')?.value; login(email, pwd); }); return; }
-    if (darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
-    if (kitchenMode) document.body.classList.add('kitchen-mode'); else document.body.classList.remove('kitchen-mode');
-    root.innerHTML = `<div class="min-h-screen bg-gray-50">${renderSidebar()}<div class="ml-64">${renderMainContent()}</div></div>`;
     
-    document.querySelectorAll('.sidebar-nav').forEach(btn => { btn.addEventListener('click', () => { currentView = btn.dataset.view; render(); }); });
-    document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
-    document.getElementById('kitchenModeToggle')?.addEventListener('click', toggleKitchenMode);
-    document.getElementById('logoutBtn')?.addEventListener('click', logout);
+    if (!isLoggedIn) {
+      root.innerHTML = renderLogin();
+      attachLoginEvents();
+      return;
+    }
     
-    document.querySelectorAll('.acceptOrderBtn').forEach(btn => { btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Preparing')); });
-    document.querySelectorAll('.declineOrderBtn').forEach(btn => { btn.addEventListener('click', () => { if (confirm('Decline this order?')) updateOrderStatus(btn.dataset.id, 'Declined'); }); });
-    document.querySelectorAll('.readyOrderBtn').forEach(btn => { btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Ready')); });
-    document.querySelectorAll('.serveOrderBtn').forEach(btn => { btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Served')); });
-    document.querySelectorAll('.resolveReqBtn').forEach(btn => { btn.addEventListener('click', () => resolveServiceRequest(parseInt(btn.dataset.id))); });
-    document.querySelectorAll('.printOrderBtn').forEach(btn => { btn.addEventListener('click', () => printBill(JSON.parse(btn.dataset.order))); });
-    document.querySelectorAll('.date-filter-btn').forEach(btn => { btn.addEventListener('click', () => { dateFilter = btn.dataset.filter; render(); }); });
-    document.getElementById('addTestOrderBtn')?.addEventListener('click', addTestOrder);
-    document.getElementById('addMenuItemBtn')?.addEventListener('click', () => { const name = prompt('Item name:'); const price = parseFloat(prompt('Price:')); if (name && price) addMenuItem({ name, price, category: 'Starters', veg: true, available: true, prepTime: 10, image: '🍽️' }); });
-    document.querySelectorAll('.editMenuItemBtn').forEach(btn => { btn.addEventListener('click', () => { const item = menuItems.find(i => i.id == btn.dataset.id); const newPrice = prompt('New price:', item.price); if (newPrice) updateMenuItem(item.id, { price: parseFloat(newPrice) }); }); });
-    document.querySelectorAll('.toggleAvailBtn').forEach(btn => { btn.addEventListener('click', () => toggleAvailability(btn.dataset.id, btn.dataset.available === 'true')); });
-    document.querySelectorAll('.deleteMenuItemBtn').forEach(btn => { btn.addEventListener('click', () => deleteMenuItem(btn.dataset.id, btn.dataset.name)); });
+    let main = currentView === 'dashboard' ? renderDashboard() : currentView === 'menu' ? renderMenuManagement() : renderOrdersManagement();
+    root.innerHTML = main + renderAddEditModal() + renderTaxModal();
+    attachEvents();
   }
   
-  loadLogs(); addLog('APP_STARTED', { version: '3.0' }); render();
+  // ======================== EVENT HANDLERS ========================
+  function attachLoginEvents() {
+    const loginBtn = document.getElementById('loginBtn');
+    const showRegisterBtn = document.getElementById('showRegisterBtn');
+    const showLoginBtn = document.getElementById('showLoginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    
+    if (loginBtn) {
+      loginBtn.addEventListener('click', () => {
+        const email = document.getElementById('loginEmail')?.value;
+        const password = document.getElementById('loginPassword')?.value;
+        if (email && password) {
+          loginUser(email, password);
+        } else {
+          showNotification('Please enter email and password', 'error');
+        }
+      });
+    }
+    
+    if (showRegisterBtn) {
+      showRegisterBtn.addEventListener('click', () => {
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+      });
+    }
+    
+    if (showLoginBtn) {
+      showLoginBtn.addEventListener('click', () => {
+        registerForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+      });
+    }
+    
+    if (registerBtn) {
+      registerBtn.addEventListener('click', () => {
+        const restaurantName = document.getElementById('restaurantName')?.value;
+        const ownerName = document.getElementById('ownerName')?.value;
+        const email = document.getElementById('registerEmail')?.value;
+        const password = document.getElementById('registerPassword')?.value;
+        const address = document.getElementById('restaurantAddress')?.value;
+        const phone = document.getElementById('restaurantPhone')?.value;
+        
+        if (restaurantName && ownerName && email && password) {
+          registerUser(email, password, ownerName, restaurantName, address, phone);
+        } else {
+          showNotification('Please fill all required fields', 'error');
+        }
+      });
+    }
+  }
+  
+  function attachEvents() {
+    document.getElementById('logoutBtn')?.addEventListener('click', () => { logoutUser(); });
+    document.getElementById('goToMenuBtn')?.addEventListener('click', () => { currentView = 'menu'; render(); });
+    document.getElementById('goToOrdersBtn')?.addEventListener('click', () => { currentView = 'orders'; currentTab = 'pending'; render(); });
+    document.getElementById('viewAllOrdersBtn')?.addEventListener('click', () => { currentView = 'orders'; currentTab = 'pending'; render(); });
+    document.getElementById('backToDashboard')?.addEventListener('click', () => { currentView = 'dashboard'; render(); });
+    document.getElementById('backToDashboardOrders')?.addEventListener('click', () => { currentView = 'dashboard'; render(); });
+    document.getElementById('addItemBtn')?.addEventListener('click', () => { 
+      editingItem = null; 
+      selectedFile = null; 
+      imagePreviewUrl = null; 
+      selectedVegStatus = true;
+      showModal = true; 
+      render(); 
+    });
+    document.getElementById('taxSettingsBtn')?.addEventListener('click', () => { showTaxModal = true; render(); });
+    
+    document.getElementById('itemFile')?.addEventListener('change', handleFileSelect);
+    
+    document.querySelectorAll('.editItemBtn').forEach(btn => {
+      btn.addEventListener('click', () => { 
+        editingItem = menuItems.find(i => i.id === btn.dataset.id); 
+        selectedFile = null; 
+        imagePreviewUrl = editingItem?.image || null; 
+        showModal = true; 
+        render(); 
+      });
+    });
+    
+    document.querySelectorAll('.toggleAvailBtn').forEach(btn => {
+      btn.addEventListener('click', () => { toggleAvailability(btn.dataset.id, btn.dataset.available === 'true'); });
+    });
+    
+    document.querySelectorAll('.deleteItemBtn').forEach(btn => {
+      btn.addEventListener('click', () => { deleteMenuItem(btn.dataset.id, btn.dataset.name); });
+    });
+    
+    // Order action buttons
+    document.querySelectorAll('.acceptOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => { updateOrderStatus(btn.dataset.id, 'Accepted'); });
+    });
+    
+    document.querySelectorAll('.declineOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => { 
+        if (confirm('Are you sure you want to decline this order?')) {
+          updateOrderStatus(btn.dataset.id, 'Declined');
+        }
+      });
+    });
+    
+    document.querySelectorAll('.prepareOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => { updateOrderStatus(btn.dataset.id, 'Preparing'); });
+    });
+    
+    document.querySelectorAll('.readyOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => { updateOrderStatus(btn.dataset.id, 'Ready'); });
+    });
+    
+    document.querySelectorAll('.serveOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => { updateOrderStatus(btn.dataset.id, 'Served'); });
+    });
+    
+    document.querySelectorAll('.deleteOrderBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (confirm('Permanently delete this declined order?')) {
+          try {
+            await deleteDoc(doc(db, "orders", btn.dataset.id));
+            showNotification('Order deleted successfully', 'success');
+          } catch (error) {
+            showNotification('Error deleting order', 'error');
+          }
+        }
+      });
+    });
+    
+    document.querySelectorAll('.printOrderBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const order = JSON.parse(btn.dataset.order);
+        printBill(order);
+      });
+    });
+    
+    document.querySelectorAll('.order-tab').forEach(tab => {
+      tab.addEventListener('click', () => { currentTab = tab.dataset.tab; render(); });
+    });
+    
+    const closeModal = () => { showModal = false; editingItem = null; selectedFile = null; imagePreviewUrl = null; isCompressing = false; compressProgress = 0; render(); };
+    const closeTaxModal = () => { showTaxModal = false; render(); };
+    
+    document.getElementById('closeModalBtn')?.addEventListener('click', closeModal);
+    document.getElementById('cancelModalBtn')?.addEventListener('click', closeModal);
+    document.getElementById('modalOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'modalOverlay') closeModal(); });
+    document.getElementById('closeTaxModal')?.addEventListener('click', closeTaxModal);
+    document.getElementById('cancelTaxBtn')?.addEventListener('click', closeTaxModal);
+    document.getElementById('taxModalOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'taxModalOverlay') closeTaxModal(); });
+    
+    document.getElementById('saveTaxBtn')?.addEventListener('click', () => {
+      TAX_CONFIG.cgst.enabled = document.getElementById('cgstEnabled')?.checked || false;
+      TAX_CONFIG.sgst.enabled = document.getElementById('sgstEnabled')?.checked || false;
+      TAX_CONFIG.serviceCharge.enabled = document.getElementById('serviceChargeEnabled')?.checked || false;
+      TAX_CONFIG.roundOff = document.getElementById('roundOffEnabled')?.checked || false;
+      showNotification('Tax settings saved!', 'success');
+      showTaxModal = false;
+      render();
+    });
+    
+    document.getElementById('saveItemBtn')?.addEventListener('click', async () => {
+      const name = document.getElementById('itemName')?.value.trim();
+      const price = parseFloat(document.getElementById('itemPrice')?.value);
+      const category = document.getElementById('itemCategory')?.value;
+      const description = document.getElementById('itemDescription')?.value;
+      const file = document.getElementById('itemFile')?.files[0];
+      
+      const foodTypeRadio = document.querySelector('input[name="foodType"]:checked');
+      const isVeg = foodTypeRadio?.value === 'veg';
+      
+      if (!name || !price || isNaN(price) || price <= 0) {
+        showNotification('Please enter valid name and price', 'error');
+        return;
+      }
+      
+      if (editingItem) {
+        await updateMenuItem(editingItem.id, { name, price, category, description, veg: isVeg }, file);
+      } else {
+        await addMenuItem({ name, price, category, description, veg: isVeg }, file);
+      }
+      closeModal();
+    });
+  }
+  
+  // ======================== INITIALIZATION ========================
+  function init() {
+    loadBillCounter();
+    checkAuthState();
+  }
+  
+  init();
 </script>
 </body>
 </html>
