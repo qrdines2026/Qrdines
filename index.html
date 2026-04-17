@@ -11,73 +11,33 @@
     * { font-family: 'Inter', sans-serif; }
     body { background: #f8fafc; }
     
-    /* Animations */
     @keyframes slideUp {
       from { opacity: 0; transform: translateY(30px); }
       to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes bounceIn {
-      0% { transform: scale(0.8); opacity: 0; }
-      80% { transform: scale(1.05); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.08); }
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
     
-    .menu-item-card {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .menu-item-card:active {
-      transform: scale(0.98);
-    }
+    .menu-item-card { transition: all 0.3s ease; cursor: pointer; }
+    .menu-item-card:active { transform: scale(0.98); }
     
     .cart-floating {
       transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
       box-shadow: 0 10px 30px -8px rgba(249,115,22,0.4);
     }
-    .cart-floating:hover {
-      transform: scale(1.05);
-      box-shadow: 0 15px 35px -10px rgba(249,115,22,0.5);
-    }
+    .cart-floating:hover { transform: scale(1.05); }
     
-    .category-tab {
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
-    .category-tab.active {
-      background: #f97316;
-      color: white;
-      box-shadow: 0 4px 12px rgba(249,115,22,0.35);
-    }
+    .category-tab { transition: all 0.2s ease; white-space: nowrap; cursor: pointer; }
+    .category-tab.active { background: #f97316; color: white; box-shadow: 0 4px 12px rgba(249,115,22,0.35); }
     
-    .step-active {
-      background: #f97316;
-      color: white;
-      border-color: #f97316;
-      box-shadow: 0 0 0 4px rgba(249,115,22,0.2);
-    }
-    .step-completed {
-      background: #22c55e;
-      color: white;
-      border-color: #22c55e;
-    }
+    .step-active { background: #f97316; color: white; border-color: #f97316; box-shadow: 0 0 0 4px rgba(249,115,22,0.2); }
+    .step-completed { background: #22c55e; color: white; border-color: #22c55e; }
     
-    .toast-message {
-      animation: slideUp 0.3s ease-out;
-    }
+    .toast-message { animation: slideUp 0.3s ease-out; }
     
-    .veg-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      display: inline-block;
-    }
+    .veg-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
     .veg-dot.green { background: #22c55e; box-shadow: 0 0 0 2px #dcfce7; }
     .veg-dot.red { background: #ef4444; box-shadow: 0 0 0 2px #fee2e2; }
     
@@ -94,20 +54,9 @@
       animation: spin 1s linear infinite;
     }
     
-    .quantity-btn {
-      transition: all 0.15s;
-    }
-    .quantity-btn:active {
-      transform: scale(0.9);
-    }
-    
-    .scrollbar-hide::-webkit-scrollbar {
-      display: none;
-    }
-    .scrollbar-hide {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
+    .quantity-btn:active { transform: scale(0.9); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     
     .cart-badge {
       position: absolute;
@@ -123,44 +72,22 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     
-    .food-image {
-      transition: transform 0.3s ease;
-    }
-    .menu-item-card:hover .food-image {
-      transform: scale(1.05);
-    }
-    
-    ::-webkit-scrollbar {
-      width: 4px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #e2e8f0;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #f97316;
-      border-radius: 10px;
-    }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #e2e8f0; }
+    ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
   </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="app"></div>
 
-<script type="module">
-  import React, { useState, useEffect } from 'https://esm.sh/react@18.2.0';
-  import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
-
+<script>
   // ======================== LOGGING SYSTEM ========================
   const logger = {
     log: (event, data) => {
-      const logEntry = {
-        event,
-        timestamp: new Date().toISOString(),
-        ...data
-      };
-      console.log('[QR DINE LOG]', JSON.stringify(logEntry, null, 2));
+      const logEntry = { event, timestamp: new Date().toISOString(), ...data };
+      console.log('[QR DINE]', logEntry);
       const logs = JSON.parse(localStorage.getItem('qr_dine_logs') || '[]');
       logs.push(logEntry);
       if (logs.length > 100) logs.shift();
@@ -170,7 +97,6 @@
 
   // ======================== RESTAURANT DATA ========================
   const RESTAURANT = {
-    id: 'spice_garden_001',
     name: 'Spice Garden',
     logo: 'https://images.pexels.com/photos/67468/pexels-photo-67468.jpeg?w=100&h=100&fit=crop',
     coverImage: 'https://images.pexels.com/photos/260922/pexels-photo-260922.jpeg?w=800&h=350&fit=crop',
@@ -179,24 +105,19 @@
     totalRatings: 1250
   };
 
-  // ======================== MENU DATA (16 ITEMS) ========================
+  // ======================== MENU DATA ========================
   const MENU_ITEMS = [
     { id: 1, name: "Paneer Tikka", price: 220, category: "Starters", image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=200&h=200&fit=crop", veg: true, spice: "Medium", prepTime: 15, available: true, tags: ["Popular"], rating: 4.5, orders: 342 },
     { id: 2, name: "Chicken 65", price: 280, category: "Starters", image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=200&h=200&fit=crop", veg: false, spice: "Hot", prepTime: 20, available: true, tags: ["Chef Recommended", "Best Seller"], rating: 4.9, orders: 567 },
     { id: 3, name: "Crispy Corn", price: 160, category: "Starters", image: "https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=200&h=200&fit=crop", veg: true, spice: "Mild", prepTime: 12, available: true, tags: [], rating: 4.3, orders: 234 },
-    { id: 4, name: "Veg Spring Roll", price: 180, category: "Starters", image: "https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=200&h=200&fit=crop", veg: true, spice: "Mild", prepTime: 12, available: true, tags: [], rating: 4.2, orders: 189 },
-    { id: 5, name: "Butter Chicken", price: 380, category: "Main Course", image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=200&h=200&fit=crop", veg: false, spice: "Medium", prepTime: 25, available: true, tags: ["Chef Recommended", "Popular"], rating: 4.9, orders: 892 },
-    { id: 6, name: "Dal Makhani", price: 240, category: "Main Course", image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=200&h=200&fit=crop", veg: true, spice: "Mild", prepTime: 20, available: true, tags: ["Popular"], rating: 4.6, orders: 456 },
-    { id: 7, name: "Veg Biryani", price: 250, category: "Main Course", image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=200&h=200&fit=crop", veg: true, spice: "Medium", prepTime: 20, available: true, tags: ["Popular"], rating: 4.6, orders: 567 },
-    { id: 8, name: "Chicken Biryani", price: 320, category: "Main Course", image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=200&h=200&fit=crop", veg: false, spice: "Hot", prepTime: 25, available: true, tags: ["Best Seller"], rating: 4.9, orders: 1234 },
-    { id: 9, name: "Garlic Naan", price: 55, category: "Main Course", image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=200&h=200&fit=crop", veg: true, spice: "Mild", prepTime: 8, available: true, tags: [], rating: 4.5, orders: 678 },
-    { id: 10, name: "Butter Naan", price: 45, category: "Main Course", image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=200&h=200&fit=crop", veg: true, spice: "Mild", prepTime: 8, available: true, tags: [], rating: 4.4, orders: 567 },
-    { id: 11, name: "Mango Lassi", price: 90, category: "Drinks", image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 5, available: true, tags: ["Popular"], rating: 4.8, orders: 789 },
-    { id: 12, name: "Virgin Mojito", price: 110, category: "Drinks", image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 5, available: true, tags: [], rating: 4.6, orders: 456 },
-    { id: 13, name: "Sweet Lassi", price: 80, category: "Drinks", image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 5, available: true, tags: [], rating: 4.7, orders: 345 },
-    { id: 14, name: "Gulab Jamun", price: 80, category: "Desserts", image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 10, available: true, tags: ["Chef Recommended"], rating: 4.8, orders: 567 },
-    { id: 15, name: "Rasmalai", price: 100, category: "Desserts", image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 10, available: false, tags: [], rating: 4.5, orders: 234 },
-    { id: 16, name: "Ice Cream", price: 70, category: "Desserts", image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 5, available: true, tags: [], rating: 4.6, orders: 789 }
+    { id: 4, name: "Butter Chicken", price: 380, category: "Main Course", image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=200&h=200&fit=crop", veg: false, spice: "Medium", prepTime: 25, available: true, tags: ["Chef Recommended", "Popular"], rating: 4.9, orders: 892 },
+    { id: 5, name: "Veg Biryani", price: 250, category: "Main Course", image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=200&h=200&fit=crop", veg: true, spice: "Medium", prepTime: 20, available: true, tags: ["Popular"], rating: 4.6, orders: 567 },
+    { id: 6, name: "Chicken Biryani", price: 320, category: "Main Course", image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=200&h=200&fit=crop", veg: false, spice: "Hot", prepTime: 25, available: true, tags: ["Best Seller"], rating: 4.9, orders: 1234 },
+    { id: 7, name: "Garlic Naan", price: 55, category: "Main Course", image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=200&h=200&fit=crop", veg: true, spice: "Mild", prepTime: 8, available: true, tags: [], rating: 4.5, orders: 678 },
+    { id: 8, name: "Mango Lassi", price: 90, category: "Drinks", image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 5, available: true, tags: ["Popular"], rating: 4.8, orders: 789 },
+    { id: 9, name: "Virgin Mojito", price: 110, category: "Drinks", image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 5, available: true, tags: [], rating: 4.6, orders: 456 },
+    { id: 10, name: "Gulab Jamun", price: 80, category: "Desserts", image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 10, available: true, tags: ["Chef Recommended"], rating: 4.8, orders: 567 },
+    { id: 11, name: "Ice Cream", price: 70, category: "Desserts", image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=200&h=200&fit=crop", veg: true, spice: "None", prepTime: 5, available: true, tags: [], rating: 4.6, orders: 789 }
   ];
 
   const categories = [
@@ -206,505 +127,520 @@
     { id: 'Desserts', name: 'Desserts', icon: 'fa-ice-cream' }
   ];
 
-  // ======================== MAIN APP COMPONENT ========================
-  const App = () => {
-    const [tableNumber, setTableNumber] = useState(null);
-    const [activeCategory, setActiveCategory] = useState('Starters');
-    const [cart, setCart] = useState([]);
-    const [showCart, setShowCart] = useState(false);
-    const [orderPlaced, setOrderPlaced] = useState(false);
-    const [currentOrder, setCurrentOrder] = useState(null);
-    const [orderStatus, setOrderStatus] = useState(null);
-    const [toast, setToast] = useState(null);
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
-    const [loading, setLoading] = useState(true);
-    const [serviceRequest, setServiceRequest] = useState(null);
+  // ======================== APP STATE ========================
+  let tableNumber = null;
+  let activeCategory = 'Starters';
+  let cart = [];
+  let showCart = false;
+  let orderPlaced = false;
+  let currentOrder = null;
+  let orderStatus = null;
+  let toast = null;
+  let isOnline = navigator.onLine;
+  let loading = true;
+  let serviceRequest = null;
+  let statusInterval = null;
 
-    // Extract table from URL (?t=5)
-    useEffect(() => {
-      const urlParams = new URLSearchParams(window.location.search);
-      let table = urlParams.get('t') || urlParams.get('table');
-      if (table) {
-        const tableNum = parseInt(table);
-        setTableNumber(tableNum);
-        localStorage.setItem('qr_table_number', tableNum);
-        logger.log('PAGE_LOAD', { table: tableNum, url: window.location.href });
+  // DOM Elements
+  let appEl = null;
+
+  // ======================== HELPER FUNCTIONS ========================
+  function showToastMessage(message, type = 'success') {
+    toast = { message, type };
+    render();
+    setTimeout(() => { toast = null; render(); }, 3000);
+  }
+
+  function saveCart() {
+    if (tableNumber) {
+      localStorage.setItem(`qr_cart_${tableNumber}`, JSON.stringify(cart));
+    }
+  }
+
+  function loadCart() {
+    if (tableNumber) {
+      const saved = localStorage.getItem(`qr_cart_${tableNumber}`);
+      if (saved) {
+        cart = JSON.parse(saved);
+      }
+    }
+  }
+
+  function getCartTotal() {
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  }
+
+  function getCartCount() {
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
+  }
+
+  function addToCart(item) {
+    if (!item.available) {
+      showToastMessage(`${item.name} is currently unavailable`, 'error');
+      return;
+    }
+    const existing = cart.find(i => i.id === item.id);
+    if (existing) {
+      existing.quantity++;
+    } else {
+      cart.push({ ...item, quantity: 1 });
+    }
+    saveCart();
+    logger.log('ADD_TO_CART', { table: tableNumber, item: item.name });
+    showToastMessage(`${item.name} added to cart`, 'success');
+    render();
+  }
+
+  function updateQuantity(itemId, change) {
+    const item = cart.find(i => i.id === itemId);
+    if (!item) return;
+    const newQty = item.quantity + change;
+    if (newQty <= 0) {
+      cart = cart.filter(i => i.id !== itemId);
+      showToastMessage(`${item.name} removed`, 'info');
+    } else {
+      item.quantity = newQty;
+    }
+    saveCart();
+    render();
+  }
+
+  function placeOrder() {
+    if (cart.length === 0) {
+      showToastMessage('Your cart is empty!', 'error');
+      return;
+    }
+    const total = getCartTotal();
+    const gst = total * 0.05;
+    currentOrder = {
+      id: 'ORD_' + Date.now(),
+      table: tableNumber,
+      items: [...cart],
+      subtotal: total,
+      gst: gst,
+      total: total + gst,
+      timestamp: new Date().toLocaleString(),
+      estimatedTime: 25
+    };
+    orderPlaced = true;
+    cart = [];
+    saveCart();
+    logger.log('ORDER_PLACED', { orderId: currentOrder.id, table: tableNumber });
+    showToastMessage('Order placed successfully!', 'success');
+    
+    // Start status simulation
+    let statusIndex = 0;
+    const statuses = ['Pending', 'Accepted', 'Preparing', 'Ready', 'Served'];
+    if (statusInterval) clearInterval(statusInterval);
+    statusInterval = setInterval(() => {
+      if (statusIndex < statuses.length) {
+        orderStatus = statuses[statusIndex];
+        statusIndex++;
+        render();
       } else {
-        const stored = localStorage.getItem('qr_table_number');
-        if (stored) {
-          setTableNumber(parseInt(stored));
-          logger.log('TABLE_DETECTED', { table: parseInt(stored), source: 'localStorage' });
-        } else {
-          setToast({ message: 'Table not detected. Please scan valid QR code.', type: 'error' });
-          logger.log('TABLE_ERROR', { error: 'No table parameter in URL' });
-        }
+        clearInterval(statusInterval);
+        statusInterval = null;
       }
-      setTimeout(() => setLoading(false), 800);
-    }, []);
+    }, 4000);
+    render();
+  }
 
-    // Online/offline detection
-    useEffect(() => {
-      const handleOnline = () => {
-        setIsOnline(true);
-        setToast({ message: 'Back online!', type: 'success' });
-        setTimeout(() => setToast(null), 2000);
-      };
-      const handleOffline = () => {
-        setIsOnline(false);
-        setToast({ message: 'No internet connection. Please check your network.', type: 'error' });
-      };
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      };
-    }, []);
+  function newOrder() {
+    orderPlaced = false;
+    currentOrder = null;
+    orderStatus = null;
+    if (statusInterval) {
+      clearInterval(statusInterval);
+      statusInterval = null;
+    }
+    render();
+  }
 
-    // Load cart from localStorage
-    useEffect(() => {
-      if (tableNumber) {
-        const saved = localStorage.getItem(`qr_cart_${tableNumber}`);
-        if (saved) {
-          setCart(JSON.parse(saved));
-        }
-      }
-    }, [tableNumber]);
+  function requestService(type) {
+    logger.log('SERVICE_REQUEST', { table: tableNumber, requestType: type });
+    serviceRequest = type;
+    showToastMessage(`${type} request sent!`, 'success');
+    render();
+    setTimeout(() => { serviceRequest = null; render(); }, 2000);
+  }
 
-    // Save cart to localStorage
-    useEffect(() => {
-      if (tableNumber) {
-        localStorage.setItem(`qr_cart_${tableNumber}`, JSON.stringify(cart));
-      }
-    }, [cart, tableNumber]);
+  // ======================== RENDER FUNCTIONS ========================
+  function getFilteredItems() {
+    return MENU_ITEMS.filter(item => item.category === activeCategory);
+  }
 
-    // Auto-clear service request notification
-    useEffect(() => {
-      if (serviceRequest) {
-        const timer = setTimeout(() => setServiceRequest(null), 3000);
-        return () => clearTimeout(timer);
-      }
-    }, [serviceRequest]);
+  function formatCurrency(amount) {
+    return '₹' + Math.round(amount);
+  }
 
-    // Simulate real-time order status updates
-    useEffect(() => {
-      if (orderPlaced && currentOrder) {
-        const statuses = ['Pending', 'Accepted', 'Preparing', 'Ready', 'Served'];
-        let index = 0;
-        const interval = setInterval(() => {
-          if (index < statuses.length) {
-            setOrderStatus(statuses[index]);
-            logger.log('ORDER_STATUS_UPDATE', { orderId: currentOrder.id, status: statuses[index], table: tableNumber });
-            index++;
-          } else {
-            clearInterval(interval);
-          }
-        }, 4000);
-        return () => clearInterval(interval);
-      }
-    }, [orderPlaced, currentOrder, tableNumber]);
+  // Loading Screen
+  function renderLoading() {
+    return `
+      <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white">
+        <div class="text-center">
+          <div class="loading-spinner mx-auto"></div>
+          <p class="mt-5 text-gray-600 font-medium">Loading your dining experience...</p>
+        </div>
+      </div>
+    `;
+  }
 
-    const showToastMessage = (message, type = 'success') => {
-      setToast({ message, type });
-      setTimeout(() => setToast(null), 3000);
-    };
+  // Invalid QR Screen
+  function renderInvalidQR() {
+    return `
+      <div class="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-orange-50 to-white">
+        <div class="bg-white rounded-2xl p-8 text-center max-w-md shadow-xl">
+          <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-qrcode text-4xl text-gray-400"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-800">Invalid QR Code</h2>
+          <p class="text-gray-500 mt-3">Please scan a valid restaurant QR code to start ordering.</p>
+          <p class="text-xs text-gray-400 mt-4">Use: ?t=5 in URL</p>
+        </div>
+      </div>
+    `;
+  }
 
-    const addToCart = (item) => {
-      if (!item.available) {
-        showToastMessage(`${item.name} is currently unavailable`, 'error');
-        return;
-      }
-      setCart(prev => {
-        const existing = prev.find(i => i.id === item.id);
-        if (existing) {
-          return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
-        }
-        return [...prev, { ...item, quantity: 1 }];
-      });
-      logger.log('ADD_TO_CART', { table: tableNumber, item: item.name, itemId: item.id, price: item.price });
-      showToastMessage(`${item.name} added to cart`, 'success');
-    };
-
-    const updateQuantity = (itemId, change) => {
-      setCart(prev => {
-        const item = prev.find(i => i.id === itemId);
-        if (!item) return prev;
-        const newQty = item.quantity + change;
-        if (newQty <= 0) {
-          logger.log('REMOVE_FROM_CART', { table: tableNumber, item: item.name });
-          showToastMessage(`${item.name} removed from cart`, 'info');
-          return prev.filter(i => i.id !== itemId);
-        }
-        return prev.map(i => i.id === itemId ? { ...i, quantity: newQty } : i);
-      });
-    };
-
-    const getCartTotal = () => {
-      return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    };
-
-    const getCartCount = () => {
-      return cart.reduce((sum, item) => sum + item.quantity, 0);
-    };
-
-    const placeOrder = () => {
-      if (cart.length === 0) {
-        showToastMessage('Your cart is empty. Add some delicious items first!', 'error');
-        return;
-      }
-      if (!isOnline) {
-        showToastMessage('No internet connection. Please check your network.', 'error');
-        return;
-      }
-
-      const order = {
-        id: 'ORD_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-        table: tableNumber,
-        items: [...cart],
-        total: getCartTotal(),
-        timestamp: new Date().toISOString(),
-        estimatedTime: 25
-      };
-      setCurrentOrder(order);
-      setOrderPlaced(true);
-      setCart([]);
-      setShowCart(false);
-      logger.log('ORDER_PLACED', { orderId: order.id, table: tableNumber, items: cart.length, total: order.total });
-      showToastMessage('Order placed successfully!', 'success');
-    };
-
-    const requestService = (type) => {
-      logger.log('SERVICE_REQUEST', { table: tableNumber, requestType: type });
-      setServiceRequest(type);
-      showToastMessage(`${type} request sent to kitchen!`, 'success');
-    };
-
-    const filteredItems = MENU_ITEMS.filter(item => item.category === activeCategory);
-
-    // Loading Screen
-    if (loading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white">
-          <div className="text-center">
-            <div className="loading-spinner mx-auto"></div>
-            <p className="mt-5 text-gray-600 font-medium">Loading your dining experience...</p>
+  // Order Tracking Screen
+  function renderOrderTracking() {
+    const statusSteps = ['Pending', 'Accepted', 'Preparing', 'Ready', 'Served'];
+    const currentStepIndex = statusSteps.indexOf(orderStatus) !== -1 ? statusSteps.indexOf(orderStatus) : 0;
+    
+    return `
+      <div class="min-h-screen bg-gradient-to-b from-orange-50 to-white pb-24">
+        <div class="bg-white shadow-md px-5 py-4 sticky top-0 z-10">
+          <div class="flex justify-between items-center">
+            <button onclick="window.newOrder()" class="text-gray-600 hover:text-orange-600 transition">
+              <i class="fas fa-arrow-left text-xl"></i>
+            </button>
+            <h1 class="font-bold text-lg text-gray-800">Track Your Order</h1>
+            <div class="w-8"></div>
           </div>
         </div>
-      );
-    }
-
-    // Invalid QR / No Table Screen
-    if (!tableNumber) {
-      return (
-        <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-orange-50 to-white">
-          <div className="bg-white rounded-2xl p-8 text-center max-w-md shadow-xl">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i className="fas fa-qrcode text-4xl text-gray-400"></i>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800">Invalid QR Code</h2>
-            <p className="text-gray-500 mt-3">Please scan a valid restaurant QR code to start ordering.</p>
-          </div>
-        </div>
-      );
-    }
-
-    // Order Tracking Screen
-    if (orderPlaced && currentOrder) {
-      const statusSteps = ['Pending', 'Accepted', 'Preparing', 'Ready', 'Served'];
-      const currentStepIndex = statusSteps.indexOf(orderStatus) !== -1 ? statusSteps.indexOf(orderStatus) : 0;
-      
-      return (
-        <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white pb-24">
-          <div className="bg-white shadow-md px-5 py-4 sticky top-0 z-10">
-            <div className="flex justify-between items-center">
-              <button onClick={() => { setOrderPlaced(false); setOrderStatus(null); }} className="text-gray-600 hover:text-orange-600 transition">
-                <i className="fas fa-arrow-left text-xl"></i>
-              </button>
-              <h1 className="font-bold text-lg text-gray-800">Track Your Order</h1>
-              <div className="w-8"></div>
-            </div>
-          </div>
-          
-          <div className="px-5 py-6 max-w-2xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-              <div className="text-center mb-6">
-                <div className="inline-block bg-green-100 rounded-full p-4 mb-4">
-                  <i className="fas fa-check-circle text-green-600 text-4xl"></i>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-800">Order Confirmed!</h2>
-                <p className="text-gray-500 mt-2">Table {tableNumber} • {currentOrder.items.length} items</p>
+        
+        <div class="px-5 py-6 max-w-2xl mx-auto">
+          <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <div class="text-center mb-6">
+              <div class="inline-block bg-green-100 rounded-full p-4 mb-4">
+                <i class="fas fa-check-circle text-green-600 text-4xl"></i>
               </div>
-              
-              {/* Order Status Timeline */}
-              <div className="relative py-8">
-                <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2"></div>
-                <div className="relative flex justify-between">
-                  {statusSteps.map((step, idx) => (
-                    <div key={step} className="text-center z-10 flex-1">
-                      <div className={`w-11 h-11 rounded-full border-2 flex items-center justify-center mx-auto transition-all ${idx <= currentStepIndex ? (idx < currentStepIndex ? 'step-completed border-green-500' : 'step-active border-orange-500') : 'bg-white border-gray-300'}`}>
-                        {idx < currentStepIndex ? <i className="fas fa-check text-white text-sm"></i> : <span className={`text-sm font-bold ${idx === currentStepIndex ? 'text-white' : 'text-gray-400'}`}>{idx + 1}</span>}
-                      </div>
-                      <p className={`text-xs mt-3 font-semibold ${idx === currentStepIndex ? 'text-orange-600' : 'text-gray-400'}`}>{step}</p>
+              <h2 class="text-2xl font-bold text-gray-800">Order Confirmed!</h2>
+              <p class="text-gray-500 mt-2">Table ${currentOrder.table} • ${currentOrder.items.length} items</p>
+            </div>
+            
+            <div class="relative py-8">
+              <div class="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2"></div>
+              <div class="relative flex justify-between">
+                ${statusSteps.map((step, idx) => `
+                  <div class="text-center z-10 flex-1">
+                    <div class="w-11 h-11 rounded-full border-2 flex items-center justify-center mx-auto transition-all ${idx <= currentStepIndex ? (idx < currentStepIndex ? 'step-completed border-green-500' : 'step-active border-orange-500') : 'bg-white border-gray-300'}">
+                      ${idx < currentStepIndex ? '<i class="fas fa-check text-white text-sm"></i>' : `<span class="text-sm font-bold ${idx === currentStepIndex ? 'text-white' : 'text-gray-400'}">${idx + 1}</span>`}
                     </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="mt-6 p-5 bg-orange-50 rounded-xl">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700 font-medium">Estimated Preparation Time</span>
-                  <span className="font-bold text-orange-600 text-lg">{currentOrder.estimatedTime} minutes</span>
-                </div>
+                    <p class="text-xs mt-3 font-semibold ${idx === currentStepIndex ? 'text-orange-600' : 'text-gray-400'}">${step}</p>
+                  </div>
+                `).join('')}
               </div>
             </div>
             
-            <button onClick={() => { setOrderPlaced(false); setOrderStatus(null); }} className="w-full bg-orange-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-orange-700 transition shadow-lg">
-              <i className="fas fa-plus mr-2"></i> Place New Order
+            <div class="mt-6 p-5 bg-orange-50 rounded-xl">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-700 font-medium">Estimated Preparation Time</span>
+                <span class="font-bold text-orange-600 text-lg">${currentOrder.estimatedTime} minutes</span>
+              </div>
+            </div>
+            
+            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+              <h3 class="font-semibold mb-2">Order Summary</h3>
+              ${currentOrder.items.map(item => `
+                <div class="flex justify-between text-sm py-1">
+                  <span>${item.name} x${item.quantity}</span>
+                  <span>${formatCurrency(item.price * item.quantity)}</span>
+                </div>
+              `).join('')}
+              <div class="border-t mt-2 pt-2">
+                <div class="flex justify-between"><span>Subtotal</span><span>${formatCurrency(currentOrder.subtotal)}</span></div>
+                <div class="flex justify-between"><span>GST (5%)</span><span>${formatCurrency(currentOrder.gst)}</span></div>
+                <div class="flex justify-between font-bold mt-1"><span>Total</span><span class="text-orange-600">${formatCurrency(currentOrder.total)}</span></div>
+              </div>
+            </div>
+          </div>
+          
+          <button onclick="window.newOrder()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-orange-700 transition shadow-lg">
+            <i class="fas fa-plus mr-2"></i> Place New Order
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  // Cart Screen
+  function renderCart() {
+    const cartTotal = getCartTotal();
+    const gst = cartTotal * 0.05;
+    const finalTotal = cartTotal + gst;
+    
+    if (cart.length === 0) {
+      return `
+        <div class="min-h-screen bg-gray-50">
+          <div class="bg-white shadow-md px-5 py-4 sticky top-0 z-10 flex items-center gap-4">
+            <button onclick="window.toggleCart()" class="text-gray-600"><i class="fas fa-arrow-left text-xl"></i></button>
+            <h1 class="font-bold text-xl flex-1 text-gray-800">Your Cart</h1>
+          </div>
+          <div class="text-center py-20">
+            <i class="fas fa-shopping-cart text-6xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">Your cart is empty</p>
+            <button onclick="window.toggleCart()" class="mt-5 text-orange-600 font-semibold text-lg">Browse Menu →</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    return `
+      <div class="min-h-screen bg-gray-50 pb-28">
+        <div class="bg-white shadow-md px-5 py-4 sticky top-0 z-10 flex items-center gap-4">
+          <button onclick="window.toggleCart()" class="text-gray-600"><i class="fas fa-arrow-left text-xl"></i></button>
+          <h1 class="font-bold text-xl flex-1 text-gray-800">Your Cart</h1>
+          <span class="text-sm bg-orange-100 text-orange-600 px-3 py-1 rounded-full font-medium">Table ${tableNumber}</span>
+        </div>
+        
+        <div class="px-5 py-4 max-w-2xl mx-auto">
+          <div class="space-y-3 mb-6">
+            ${cart.map(item => `
+              <div class="bg-white rounded-xl p-4 shadow-sm flex gap-4">
+                <img src="${item.image}" class="w-20 h-20 rounded-xl object-cover" onerror="this.src='https://placehold.co/200x200/F97316/white?text=Food'">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>
+                    <h3 class="font-bold text-gray-800">${item.name}</h3>
+                  </div>
+                  <p class="text-orange-600 font-bold mt-1">${formatCurrency(item.price)}</p>
+                  <div class="flex items-center gap-3 mt-2">
+                    <button onclick="window.updateQty(${item.id}, -1)" class="quantity-btn w-8 h-8 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center"><i class="fas fa-minus text-xs"></i></button>
+                    <span class="font-bold w-6 text-center">${item.quantity}</span>
+                    <button onclick="window.updateQty(${item.id}, 1)" class="quantity-btn w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><i class="fas fa-plus text-xs"></i></button>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="font-bold">${formatCurrency(item.price * item.quantity)}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          
+          <div class="bg-white rounded-xl p-5 shadow-sm">
+            <div class="flex justify-between mb-3 pb-3 border-b">
+              <span>Subtotal</span><span class="font-bold">${formatCurrency(cartTotal)}</span>
+            </div>
+            <div class="flex justify-between mb-3 pb-3 border-b">
+              <span>GST (5%)</span><span>${formatCurrency(gst)}</span>
+            </div>
+            <div class="flex justify-between pt-3">
+              <span class="text-xl font-bold">Total</span>
+              <span class="text-2xl font-bold text-orange-600">${formatCurrency(finalTotal)}</span>
+            </div>
+            <button onclick="window.placeOrder()" class="w-full bg-orange-600 text-white py-4 rounded-xl font-bold text-lg mt-5 hover:bg-orange-700 transition shadow-lg">
+              <i class="fas fa-check-circle mr-2"></i> Place Order
             </button>
           </div>
         </div>
-      );
-    }
+      </div>
+    `;
+  }
 
-    // Cart Screen
-    if (showCart) {
-      const cartTotal = getCartTotal();
-      const gst = cartTotal * 0.05;
-      const finalTotal = cartTotal + gst;
-      
-      return (
-        <div className="min-h-screen bg-gray-50 pb-28">
-          <div className="bg-white shadow-md px-5 py-4 sticky top-0 z-10 flex items-center gap-4">
-            <button onClick={() => setShowCart(false)} className="text-gray-600 hover:text-orange-600 transition"><i className="fas fa-arrow-left text-xl"></i></button>
-            <h1 className="font-bold text-xl flex-1 text-gray-800">Your Cart</h1>
-            <span className="text-sm bg-orange-100 text-orange-600 px-3 py-1 rounded-full font-medium">Table {tableNumber}</span>
-          </div>
-          
-          <div className="px-5 py-4 max-w-2xl mx-auto">
-            {cart.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-2xl shadow-sm">
-                <i className="fas fa-shopping-cart text-6xl text-gray-300 mb-4"></i>
-                <p className="text-gray-500 text-lg">Your cart is empty</p>
-                <button onClick={() => setShowCart(false)} className="mt-5 text-orange-600 font-semibold text-lg hover:underline">Browse Menu →</button>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-3 mb-6">
-                  {cart.map(item => (
-                    <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm flex gap-4 transition hover:shadow-md">
-                      <img src={item.image} className="w-20 h-20 rounded-xl object-cover food-image" alt={item.name} />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`veg-dot ${item.veg ? 'green' : 'red'}`}></span>
-                          <h3 className="font-bold text-gray-800 text-base">{item.name}</h3>
-                        </div>
-                        <p className="text-orange-600 font-bold mt-1">₹{item.price}</p>
-                        <div className="flex items-center gap-3 mt-2">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="quantity-btn w-8 h-8 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition"><i className="fas fa-minus text-xs"></i></button>
-                          <span className="font-bold text-gray-800 w-6 text-center">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, 1)} className="quantity-btn w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center hover:bg-orange-200 transition"><i className="fas fa-plus text-xs"></i></button>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-bold text-gray-800">₹{item.price * item.quantity}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="bg-white rounded-xl p-5 shadow-sm">
-                  <div className="flex justify-between items-center mb-3 pb-3 border-b">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="font-bold text-gray-800">₹{cartTotal}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-3 pb-3 border-b">
-                    <span className="text-gray-600">GST (5%)</span>
-                    <span className="font-medium text-gray-700">₹{Math.round(gst)}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-3">
-                    <span className="text-xl font-bold text-gray-800">Total Amount</span>
-                    <span className="text-2xl font-bold text-orange-600">₹{Math.round(finalTotal)}</span>
-                  </div>
-                  <button onClick={placeOrder} className="w-full bg-orange-600 text-white py-4 rounded-xl font-bold text-lg mt-5 hover:bg-orange-700 transition shadow-lg">
-                    <i className="fas fa-check-circle mr-2"></i> Place Order
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // Main Menu Screen
-    return (
-      <div className="min-h-screen bg-gray-50 pb-28">
-        {/* Toast Notification */}
-        {toast && (
-          <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-lg text-white font-medium text-sm toast-message ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
-            <i className={`fas ${toast.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'} mr-2`}></i>
-            {toast.message}
-          </div>
-        )}
+  // Main Menu Screen
+  function renderMenu() {
+    const filtered = getFilteredItems();
+    const cartCount = getCartCount();
+    const cartTotal = getCartTotal();
+    
+    return `
+      <div class="min-h-screen bg-gray-50 pb-28">
+        ${toast ? `<div class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-lg text-white font-medium text-sm toast-message ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}">
+          <i class="fas ${toast.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'} mr-2"></i> ${toast.message}
+        </div>` : ''}
         
-        {/* Service Request Notification */}
-        {serviceRequest && (
-          <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-lg bg-blue-500 text-white font-medium text-sm toast-message">
-            <i className="fas fa-bell mr-2"></i> {serviceRequest} request sent!
-          </div>
-        )}
+        ${serviceRequest ? `<div class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-lg bg-blue-500 text-white font-medium text-sm toast-message">
+          <i class="fas fa-bell mr-2"></i> ${serviceRequest} request sent!
+        </div>` : ''}
         
-        {/* Internet Warning */}
-        {!isOnline && (
-          <div className="bg-red-500 text-white text-center py-2.5 text-sm font-medium sticky top-0 z-20">
-            <i className="fas fa-wifi mr-2"></i> No internet connection. Please check your network.
-          </div>
-        )}
+        ${!isOnline ? `<div class="bg-red-500 text-white text-center py-2.5 text-sm font-medium sticky top-0 z-20">
+          <i class="fas fa-wifi mr-2"></i> No internet connection.
+        </div>` : ''}
         
-        {/* Restaurant Header with Cover Image */}
-        <div className="relative">
-          <img src={RESTAURANT.coverImage} className="w-full h-52 object-cover" alt="Restaurant cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-          <div className="absolute bottom-0 left-0 right-0 p-5">
-            <div className="flex items-end gap-4">
-              <img src={RESTAURANT.logo} className="w-20 h-20 rounded-full border-3 border-white shadow-xl object-cover" alt="Logo" />
-              <div className="text-white flex-1">
-                <h1 className="text-2xl font-bold">{RESTAURANT.name}</h1>
-                <p className="text-sm opacity-90 mt-1">{RESTAURANT.cuisine}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <i className="fas fa-star text-yellow-400 text-sm"></i>
-                  <span className="text-sm font-medium">{RESTAURANT.rating}</span>
-                  <span className="text-xs opacity-75">({RESTAURANT.totalRatings}+ ratings)</span>
+        <div class="relative">
+          <img src="${RESTAURANT.coverImage}" class="w-full h-52 object-cover" onerror="this.src='https://placehold.co/800x350/F97316/white?text=Restaurant'">
+          <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+          <div class="absolute bottom-0 left-0 right-0 p-5">
+            <div class="flex items-end gap-4">
+              <img src="${RESTAURANT.logo}" class="w-20 h-20 rounded-full border-3 border-white shadow-xl object-cover">
+              <div class="text-white">
+                <h1 class="text-2xl font-bold">${RESTAURANT.name}</h1>
+                <p class="text-sm opacity-90">${RESTAURANT.cuisine}</p>
+                <div class="flex items-center gap-2 mt-2">
+                  <i class="fas fa-star text-yellow-400 text-sm"></i>
+                  <span class="text-sm">${RESTAURANT.rating}</span>
+                  <span class="text-xs opacity-75">(${RESTAURANT.totalRatings}+ ratings)</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
         
-        {/* Table Info & Service Buttons */}
-        <div className="bg-white shadow-sm mx-4 -mt-4 rounded-xl p-4 relative z-10">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="bg-orange-100 rounded-full w-10 h-10 flex items-center justify-center">
-                <i className="fas fa-table text-orange-600 text-lg"></i>
+        <div class="bg-white shadow-sm mx-4 -mt-4 rounded-xl p-4 relative z-10">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="bg-orange-100 rounded-full w-10 h-10 flex items-center justify-center">
+                <i class="fas fa-table text-orange-600 text-lg"></i>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Ordering from</p>
-                <p className="font-bold text-gray-800 text-lg">Table {tableNumber}</p>
+                <p class="text-xs text-gray-500">Ordering from</p>
+                <p class="font-bold text-gray-800 text-lg">Table ${tableNumber}</p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => requestService('Waiter')} className="bg-gray-100 hover:bg-orange-100 transition px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-                <i className="fas fa-bell text-orange-500"></i> Call Waiter
+            <div class="flex gap-2">
+              <button onclick="window.requestService('Waiter')" class="bg-gray-100 hover:bg-orange-100 transition px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-bell text-orange-500"></i> Call Waiter
               </button>
-              <button onClick={() => requestService('Water')} className="bg-gray-100 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-                <i className="fas fa-tint text-blue-500"></i> Water
+              <button onclick="window.requestService('Water')" class="bg-gray-100 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-tint text-blue-500"></i> Water
               </button>
-              <button onClick={() => requestService('Bill')} className="bg-gray-100 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-                <i className="fas fa-receipt text-green-500"></i> Bill
+              <button onclick="window.requestService('Bill')" class="bg-gray-100 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-receipt text-green-500"></i> Bill
               </button>
             </div>
           </div>
         </div>
         
-        {/* Sticky Category Tabs (Horizontal Scroll) */}
-        <div className="overflow-x-auto scrollbar-hide px-4 mt-5">
-          <div className="flex gap-2 pb-2">
-            {categories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`category-tab px-5 py-3 rounded-full font-semibold text-sm shadow-sm flex items-center gap-2 transition ${activeCategory === cat.id ? 'active bg-orange-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-              >
-                <i className={`fas ${cat.icon} text-sm`}></i>
-                <span>{cat.name}</span>
+        <div class="overflow-x-auto scrollbar-hide px-4 mt-5">
+          <div class="flex gap-2 pb-2">
+            ${categories.map(cat => `
+              <button onclick="window.setCategory('${cat.id}')" class="category-tab px-5 py-3 rounded-full font-semibold text-sm shadow-sm flex items-center gap-2 transition ${activeCategory === cat.id ? 'active bg-orange-600 text-white' : 'bg-white text-gray-700'}">
+                <i class="fas ${cat.icon} text-sm"></i> ${cat.name}
               </button>
-            ))}
+            `).join('')}
           </div>
         </div>
         
-        {/* Menu Items Grid with Smart Tags */}
-        <div className="px-4 py-4 space-y-4 max-w-3xl mx-auto">
-          {filteredItems.map(item => (
-            <div key={item.id} className="bg-white rounded-2xl shadow-sm overflow-hidden menu-item-card border border-gray-100">
-              <div className="flex p-4 gap-4">
-                <img src={item.image} className="w-28 h-28 rounded-xl object-cover food-image" loading="lazy" alt={item.name} onError={(e) => e.target.src = 'https://placehold.co/150x150/F97316/white?text=Food'} />
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`veg-dot ${item.veg ? 'green' : 'red'}`}></span>
-                        <h3 className="font-bold text-gray-800 text-lg">{item.name}</h3>
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {item.tags.includes('Chef Recommended') && (
-                          <span className="badge-chef text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1"><i className="fas fa-star text-xs"></i> Chef Rec</span>
-                        )}
-                        {item.tags.includes('Popular') && (
-                          <span className="badge-popular text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1"><i className="fas fa-chart-line text-xs"></i> Popular</span>
-                        )}
-                        {item.tags.includes('Best Seller') && (
-                          <span className="badge-bestseller text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1"><i className="fas fa-crown text-xs"></i> Best Seller</span>
-                        )}
-                      </div>
-                    </div>
-                    {!item.available && (
-                      <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ml-2">Out of Stock</span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><i className="fas fa-chili-pepper text-orange-500"></i> {item.spice}</span>
-                    <span className="flex items-center gap-1"><i className="fas fa-clock text-gray-400"></i> {item.prepTime} mins</span>
-                    <span className="flex items-center gap-1"><i className="fas fa-shopping-bag text-gray-400"></i> {item.orders}+ orders</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-3">
+        <div class="px-4 py-4 space-y-4 max-w-3xl mx-auto">
+          ${filtered.map(item => `
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden menu-item-card border border-gray-100">
+              <div class="flex p-4 gap-4">
+                <img src="${item.image}" class="w-28 h-28 rounded-xl object-cover" loading="lazy" onerror="this.src='https://placehold.co/150x150/F97316/white?text=Food'">
+                <div class="flex-1">
+                  <div class="flex items-start justify-between">
                     <div>
-                      <span className="text-orange-600 font-bold text-xl">₹{item.price}</span>
-                      {item.available && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <i className="fas fa-star text-yellow-400 text-xs"></i>
-                          <span className="text-xs text-gray-500">{item.rating}</span>
-                        </div>
-                      )}
+                      <div class="flex items-center gap-2">
+                        <span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>
+                        <h3 class="font-bold text-gray-800 text-lg">${item.name}</h3>
+                      </div>
+                      <div class="flex flex-wrap gap-1 mt-1">
+                        ${item.tags.includes('Chef Recommended') ? '<span class="badge-chef text-white text-xs px-2 py-0.5 rounded-full"><i class="fas fa-star text-xs"></i> Chef Rec</span>' : ''}
+                        ${item.tags.includes('Popular') ? '<span class="badge-popular text-white text-xs px-2 py-0.5 rounded-full"><i class="fas fa-chart-line text-xs"></i> Popular</span>' : ''}
+                        ${item.tags.includes('Best Seller') ? '<span class="badge-bestseller text-white text-xs px-2 py-0.5 rounded-full"><i class="fas fa-crown text-xs"></i> Best Seller</span>' : ''}
+                      </div>
                     </div>
-                    {item.available && (
-                      <button onClick={() => addToCart(item)} className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-full text-sm font-semibold flex items-center gap-2 transition shadow-md">
-                        <i className="fas fa-plus text-xs"></i> Add to Cart
-                      </button>
-                    )}
+                    ${!item.available ? '<span class="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">Out of Stock</span>' : ''}
+                  </div>
+                  
+                  <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                    <span><i class="fas fa-chili-pepper text-orange-500"></i> ${item.spice}</span>
+                    <span><i class="fas fa-clock"></i> ${item.prepTime} mins</span>
+                    <span><i class="fas fa-shopping-bag"></i> ${item.orders}+ orders</span>
+                  </div>
+                  
+                  <div class="flex justify-between items-center mt-3">
+                    <div>
+                      <span class="text-orange-600 font-bold text-xl">${formatCurrency(item.price)}</span>
+                      <div class="flex items-center gap-1 mt-1">
+                        <i class="fas fa-star text-yellow-400 text-xs"></i>
+                        <span class="text-xs text-gray-500">${item.rating}</span>
+                      </div>
+                    </div>
+                    ${item.available ? `<button onclick="window.addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})" class="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-md">
+                      <i class="fas fa-plus text-xs"></i> Add to Cart
+                    </button>` : ''}
                   </div>
                 </div>
               </div>
             </div>
-          ))}
+          `).join('')}
           
-          {filteredItems.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-2xl">
-              <i className="fas fa-utensils text-5xl text-gray-300 mb-3"></i>
-              <p className="text-gray-500">No items in this category</p>
-            </div>
-          )}
+          ${filtered.length === 0 ? '<div class="text-center py-12 bg-white rounded-2xl"><i class="fas fa-utensils text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No items in this category</p></div>' : ''}
         </div>
         
-        {/* Floating Cart Button (Always Visible) */}
-        {cart.length > 0 && (
-          <button onClick={() => setShowCart(true)} className="cart-floating fixed bottom-6 right-6 bg-orange-600 text-white rounded-full shadow-2xl flex items-center gap-3 px-6 py-3.5 z-30">
-            <div className="relative">
-              <i className="fas fa-shopping-cart text-xl"></i>
-              <span className="cart-badge">{getCartCount()}</span>
+        ${cartCount > 0 ? `
+          <button onclick="window.toggleCart()" class="cart-floating fixed bottom-6 right-6 bg-orange-600 text-white rounded-full shadow-2xl flex items-center gap-3 px-6 py-3.5 z-30">
+            <div class="relative">
+              <i class="fas fa-shopping-cart text-xl"></i>
+              <span class="cart-badge">${cartCount}</span>
             </div>
-            <div className="h-6 w-px bg-orange-400"></div>
-            <span className="font-bold text-lg">₹{getCartTotal()}</span>
-            <i className="fas fa-chevron-right text-sm ml-1"></i>
+            <div class="h-6 w-px bg-orange-400"></div>
+            <span class="font-bold text-lg">${formatCurrency(cartTotal)}</span>
+            <i class="fas fa-chevron-right text-sm ml-1"></i>
           </button>
-        )}
+        ` : ''}
       </div>
-    );
-  };
+    `;
+  }
 
-  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  function render() {
+    if (loading) {
+      appEl.innerHTML = renderLoading();
+      return;
+    }
+    if (!tableNumber) {
+      appEl.innerHTML = renderInvalidQR();
+      return;
+    }
+    if (orderPlaced) {
+      appEl.innerHTML = renderOrderTracking();
+      return;
+    }
+    if (showCart) {
+      appEl.innerHTML = renderCart();
+      return;
+    }
+    appEl.innerHTML = renderMenu();
+  }
+
+  // ======================== GLOBAL FUNCTIONS FOR ONCLICK ========================
+  window.addToCart = addToCart;
+  window.updateQty = updateQuantity;
+  window.placeOrder = placeOrder;
+  window.newOrder = newOrder;
+  window.toggleCart = () => { showCart = !showCart; render(); };
+  window.setCategory = (cat) => { activeCategory = cat; render(); };
+  window.requestService = requestService;
+
+  // ======================== INITIALIZATION ========================
+  function init() {
+    appEl = document.getElementById('app');
+    
+    // Get table from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const table = urlParams.get('t') || urlParams.get('table');
+    if (table) {
+      tableNumber = parseInt(table);
+      localStorage.setItem('qr_table_number', tableNumber);
+      logger.log('PAGE_LOAD', { table: tableNumber });
+    } else {
+      const stored = localStorage.getItem('qr_table_number');
+      if (stored) {
+        tableNumber = parseInt(stored);
+        logger.log('TABLE_DETECTED', { table: tableNumber, source: 'localStorage' });
+      }
+    }
+    
+    loadCart();
+    loading = false;
+    render();
+    
+    // Online/Offline handlers
+    window.addEventListener('online', () => { isOnline = true; showToastMessage('Back online!', 'success'); render(); });
+    window.addEventListener('offline', () => { isOnline = false; showToastMessage('No internet connection', 'error'); render(); });
+  }
+  
+  init();
 </script>
 </body>
 </html>
