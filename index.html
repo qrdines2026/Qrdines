@@ -3,31 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>QR Dine | Premium Digital Restaurant</title>
+  <title>QR Dine | Premium Digital Restaurant Experience</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'Inter', sans-serif; }
-    body { background: #f8fafc; }
+    body { background: #f8fafc; margin: 0; padding: 0; }
     
-    /* Animations */
+    /* Premium Animations */
     @keyframes slideUp {
       from { opacity: 0; transform: translateY(30px); }
       to { opacity: 1; transform: translateY(0); }
     }
     @keyframes bounce {
       0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
+      50% { transform: scale(1.08); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
     @keyframes shimmer {
       0% { background-position: -1000px 0; }
       100% { background-position: 1000px 0; }
     }
+    @keyframes ring {
+      0% { transform: rotate(0); }
+      25% { transform: rotate(15deg); }
+      75% { transform: rotate(-15deg); }
+      100% { transform: rotate(0); }
+    }
     
     .animate-slide-up { animation: slideUp 0.4s ease-out; }
     .animate-bounce { animation: bounce 0.3s ease-in-out; }
-    .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 1000px 100%; animation: shimmer 2s infinite; }
+    .animate-pulse { animation: pulse 1s ease-in-out infinite; }
+    .animate-ring { animation: ring 0.5s ease-in-out; }
     
     /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -42,10 +53,10 @@
     .menu-card:active { transform: scale(0.98); }
     
     .food-image {
-      width: 85px;
-      height: 85px;
+      width: 90px;
+      height: 90px;
       object-fit: cover;
-      border-radius: 16px;
+      border-radius: 18px;
       background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
     }
     
@@ -69,9 +80,9 @@
     /* Status Tracker */
     .status-step { flex: 1; text-align: center; position: relative; z-index: 1; }
     .status-dot {
-      width: 44px; height: 44px; background: #e2e8f0; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;
-      transition: all 0.3s; font-size: 18px; color: #94a3b8;
+      width: 48px; height: 48px; background: #e2e8f0; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;
+      transition: all 0.3s; font-size: 20px; color: #94a3b8;
     }
     .status-dot.active {
       background: linear-gradient(135deg, #f97316, #ea580c);
@@ -80,7 +91,7 @@
     }
     .status-dot.completed { background: #22c55e; color: white; }
     .status-line {
-      position: absolute; top: 22px; left: 0; right: 0; height: 2px;
+      position: absolute; top: 24px; left: 0; right: 0; height: 2px;
       background: #e2e8f0; z-index: 0;
     }
     .status-line-fill {
@@ -95,6 +106,7 @@
       background: #1f2937; color: white; padding: 12px 20px;
       border-radius: 40px; font-size: 14px; z-index: 1000;
       animation: slideUp 0.3s ease-out; white-space: nowrap;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
     }
     
     /* Loading Spinner */
@@ -111,8 +123,8 @@
     
     /* FAB Buttons */
     .fab-btn {
-      position: fixed; right: 16px; width: 50px; height: 50px;
-      border-radius: 25px; display: flex; align-items: center; justify-content: center;
+      position: fixed; right: 16px; width: 52px; height: 52px;
+      border-radius: 26px; display: flex; align-items: center; justify-content: center;
       color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       cursor: pointer; transition: all 0.3s; z-index: 35;
     }
@@ -120,7 +132,23 @@
     .fab-waiter { bottom: 100px; background: linear-gradient(135deg, #3b82f6, #2563eb); }
     .fab-water { bottom: 165px; background: linear-gradient(135deg, #06b6d4, #0891b2); }
     .fab-bill { bottom: 230px; background: linear-gradient(135deg, #10b981, #059669); }
-    .fab-btn.requested { animation: bounce 0.3s ease-in-out; background: #22c55e; }
+    .fab-btn.requested { animation: ring 0.5s ease-in-out; background: #22c55e; }
+    
+    /* Skeleton Loader */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 1000px 100%;
+      animation: shimmer 2s infinite;
+    }
+    
+    /* Quantity Badge */
+    .qty-badge {
+      position: absolute; top: -6px; right: -6px;
+      background: #f97316; color: white; border-radius: 20px;
+      min-width: 20px; height: 20px; font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; padding: 0 5px;
+    }
   </style>
 </head>
 <body>
@@ -149,7 +177,8 @@
     doc, 
     getDoc, 
     serverTimestamp,
-    getDocs
+    getDocs,
+    orderBy
   } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const app = initializeApp(firebaseConfig);
@@ -157,11 +186,16 @@
   
   // ======================== LOGGING SYSTEM ========================
   function logEvent(event, details = {}) {
-    const log = { event, table: tableNumber, timestamp: new Date().toISOString(), ...details };
+    const log = { 
+      event, 
+      table: tableNumber, 
+      timestamp: new Date().toISOString(), 
+      ...details 
+    };
     console.log(`[${log.timestamp}] ${event}:`, details);
     const logs = JSON.parse(localStorage.getItem('customer_logs') || '[]');
     logs.unshift(log);
-    if (logs.length > 100) logs.pop();
+    if (logs.length > 200) logs.pop();
     localStorage.setItem('customer_logs', JSON.stringify(logs));
   }
   
@@ -177,12 +211,15 @@
     en: {
       menu: "Menu", cart: "Cart", order: "Order", table: "Table",
       add: "Add", remove: "Remove", subtotal: "Subtotal", total: "Total",
-      placeOrder: "Place Order", orderPlaced: "Order Placed!",
+      placeOrder: "Place Order", orderPlaced: "Order Confirmed!",
       preparing: "Preparing", ready: "Ready", served: "Served",
       callWaiter: "Call Waiter", requestWater: "Request Water", requestBill: "Request Bill",
       veg: "Veg", nonVeg: "Non-Veg", popular: "Popular", recommended: "Chef Recommended",
-      outOfStock: "Out of Stock", mins: "mins", pending: "Pending",
-      accepted: "Accepted", orderReceived: "Order Received"
+      outOfStock: "Out of Stock", mins: "min", pending: "Pending",
+      accepted: "Accepted", orderReceived: "Order Received", 
+      reviewOrder: "Review Order", browseMenu: "Browse Menu",
+      estimated: "Estimated", payOnline: "Pay Online", payCounter: "Pay at Counter",
+      orderSummary: "Order Summary", billDetails: "Bill Details", totalAmount: "Total Amount"
     },
     hi: {
       menu: "मेनू", cart: "कार्ट", order: "ऑर्डर", table: "टेबल",
@@ -192,7 +229,10 @@
       callWaiter: "वेटर बुलाएं", requestWater: "पानी मांगें", requestBill: "बिल मांगें",
       veg: "शाकाहारी", nonVeg: "मांसाहारी", popular: "लोकप्रिय", recommended: "शेफ सुझाव",
       outOfStock: "स्टॉक खत्म", mins: "मिनट", pending: "लंबित",
-      accepted: "स्वीकृत", orderReceived: "ऑर्डर मिला"
+      accepted: "स्वीकृत", orderReceived: "ऑर्डर मिला",
+      reviewOrder: "ऑर्डर देखें", browseMenu: "मेनू देखें",
+      estimated: "अनुमानित", payOnline: "ऑनलाइन भुगतान", payCounter: "काउंटर पर भुगतान",
+      orderSummary: "ऑर्डर सारांश", billDetails: "बिल विवरण", totalAmount: "कुल राशि"
     },
     te: {
       menu: "మెనూ", cart: "కార్ట్", order: "ఆర్డర్", table: "టేబుల్",
@@ -202,51 +242,57 @@
       callWaiter: "వెయిటర్ కి కాల్ చేయి", requestWater: "నీళ్లు అడగండి", requestBill: "బిల్లు అడగండి",
       veg: "శాకాహారం", nonVeg: "మాంసాహారం", popular: "ప్రసిద్ధి", recommended: "చెఫ్ సిఫార్సు",
       outOfStock: "స్టాక్ లేదు", mins: "నిమిషాలు", pending: "పెండింగ్",
-      accepted: "ఆమోదించబడింది", orderReceived: "ఆర్డర్ వచ్చింది"
+      accepted: "ఆమోదించబడింది", orderReceived: "ఆర్డర్ వచ్చింది",
+      reviewOrder: "ఆర్డర్ సమీక్షించండి", browseMenu: "మెనూ బ్రౌజ్ చేయండి",
+      estimated: "అంచనా", payOnline: "ఆన్‌లైన్ చెల్లింపు", payCounter: "కౌంటర్ వద్ద చెల్లించండి",
+      orderSummary: "ఆర్డర్ సారాంశం", billDetails: "బిల్ వివరాలు", totalAmount: "మొత్తం మొత్తం"
     }
   };
   
   let currentLang = localStorage.getItem('app_language') || 'en';
   function t(key) { return translations[currentLang][key] || translations.en[key] || key; }
   
-  // ======================== MENU DATA ========================
+  // ======================== PREMIUM MENU DATA ========================
   const MENU_ITEMS = [
-    { id: 1, name: "Paneer Tikka", price: 220, image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Grilled cottage cheese with aromatic spices", veg: true, spiceLevel: "Medium", prepTime: 15, popular: true, recommended: true, available: true },
-    { id: 2, name: "Veg Spring Roll", price: 180, image: "https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Crispy rolls with fresh vegetables", veg: true, spiceLevel: "Low", prepTime: 12, popular: false, recommended: false, available: true },
-    { id: 3, name: "Chicken 65", price: 280, image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Spicy deep-fried chicken", veg: false, spiceLevel: "High", prepTime: 12, popular: true, recommended: false, available: true },
-    { id: 4, name: "Chicken Biryani", price: 320, image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Aromatic basmati rice with tender chicken", veg: false, spiceLevel: "High", prepTime: 20, popular: true, recommended: true, available: true },
-    { id: 5, name: "Veg Biryani", price: 250, image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Fragrant rice with garden vegetables", veg: true, spiceLevel: "Medium", prepTime: 18, popular: false, recommended: false, available: true },
-    { id: 6, name: "Butter Chicken", price: 380, image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Creamy tomato-based curry", veg: false, spiceLevel: "Low", prepTime: 18, popular: true, recommended: true, available: true },
-    { id: 7, name: "Butter Naan", price: 45, image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=150&h=150&fit=crop", category: "Breads", description: "Soft tandoori bread with butter", veg: true, spiceLevel: "Low", prepTime: 5, popular: false, recommended: false, available: true },
-    { id: 8, name: "Garlic Naan", price: 55, image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=150&h=150&fit=crop", category: "Breads", description: "Flavorful naan with fresh garlic", veg: true, spiceLevel: "Medium", prepTime: 5, popular: true, recommended: false, available: true },
-    { id: 9, name: "Mango Lassi", price: 90, image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=150&h=150&fit=crop", category: "Beverages", description: "Refreshing mango yogurt drink", veg: true, spiceLevel: "Low", prepTime: 3, popular: true, recommended: true, available: true },
-    { id: 10, name: "Masala Chai", price: 25, image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=150&h=150&fit=crop", category: "Beverages", description: "Traditional spiced Indian tea", veg: true, spiceLevel: "Medium", prepTime: 3, popular: false, recommended: false, available: true },
-    { id: 11, name: "Gulab Jamun", price: 80, image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=150&h=150&fit=crop", category: "Desserts", description: "Soft milk dumplings in sugar syrup", veg: true, spiceLevel: "Low", prepTime: 5, popular: true, recommended: true, available: true },
-    { id: 12, name: "Ice Cream", price: 70, image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=150&h=150&fit=crop", category: "Desserts", description: "Creamy vanilla ice cream", veg: true, spiceLevel: "Low", prepTime: 2, popular: false, recommended: false, available: true }
+    { id: 1, name: "Paneer Tikka", price: 220, image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Grilled cottage cheese with aromatic spices", veg: true, spiceLevel: "Medium", prepTime: 15, popular: true, recommended: true, available: true, bestSeller: true },
+    { id: 2, name: "Veg Spring Roll", price: 180, image: "https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Crispy rolls with fresh vegetables", veg: true, spiceLevel: "Low", prepTime: 12, popular: false, recommended: false, available: true, bestSeller: false },
+    { id: 3, name: "Chicken 65", price: 280, image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Spicy deep-fried chicken", veg: false, spiceLevel: "High", prepTime: 12, popular: true, recommended: false, available: true, bestSeller: true },
+    { id: 4, name: "Chicken Biryani", price: 320, image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Aromatic basmati rice with tender chicken", veg: false, spiceLevel: "High", prepTime: 20, popular: true, recommended: true, available: true, bestSeller: true },
+    { id: 5, name: "Veg Biryani", price: 250, image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Fragrant rice with garden vegetables", veg: true, spiceLevel: "Medium", prepTime: 18, popular: false, recommended: false, available: true, bestSeller: false },
+    { id: 6, name: "Butter Chicken", price: 380, image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Creamy tomato-based curry", veg: false, spiceLevel: "Low", prepTime: 18, popular: true, recommended: true, available: true, bestSeller: true },
+    { id: 7, name: "Butter Naan", price: 45, image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=150&h=150&fit=crop", category: "Breads", description: "Soft tandoori bread with butter", veg: true, spiceLevel: "Low", prepTime: 5, popular: false, recommended: false, available: true, bestSeller: false },
+    { id: 8, name: "Garlic Naan", price: 55, image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=150&h=150&fit=crop", category: "Breads", description: "Flavorful naan with fresh garlic", veg: true, spiceLevel: "Medium", prepTime: 5, popular: true, recommended: false, available: true, bestSeller: false },
+    { id: 9, name: "Mango Lassi", price: 90, image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=150&h=150&fit=crop", category: "Beverages", description: "Refreshing mango yogurt drink", veg: true, spiceLevel: "Low", prepTime: 3, popular: true, recommended: true, available: true, bestSeller: true },
+    { id: 10, name: "Masala Chai", price: 25, image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=150&h=150&fit=crop", category: "Beverages", description: "Traditional spiced Indian tea", veg: true, spiceLevel: "Medium", prepTime: 3, popular: false, recommended: false, available: true, bestSeller: false },
+    { id: 11, name: "Gulab Jamun", price: 80, image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=150&h=150&fit=crop", category: "Desserts", description: "Soft milk dumplings in sugar syrup", veg: true, spiceLevel: "Low", prepTime: 5, popular: true, recommended: true, available: true, bestSeller: true },
+    { id: 12, name: "Ice Cream", price: 70, image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=150&h=150&fit=crop", category: "Desserts", description: "Creamy vanilla ice cream", veg: true, spiceLevel: "Low", prepTime: 2, popular: false, recommended: false, available: true, bestSeller: false }
   ];
   
   // ======================== GLOBAL STATE ========================
   let cart = [];
   let tableNumber = null;
+  let isTableLocked = false;
   let currentStep = 1;
   let currentOrder = null;
+  let currentOrderId = null;
   let selectedCategory = 'All';
   let isLoading = false;
   let showPaymentModal = false;
   let selectedPayment = null;
+  let unsubscribeOrder = null;
   
   const categories = ['All', 'Starters', 'Main Course', 'Breads', 'Beverages', 'Desserts'];
   
-  // Spice level icons
   function getSpiceIcon(level) {
-    if (level === 'Low') return '🌿';
-    if (level === 'Medium') return '🌶️';
-    if (level === 'High') return '🔥🔥';
+    if (level === 'Low') return '🌿 Mild';
+    if (level === 'Medium') return '🌶️ Medium';
+    if (level === 'High') return '🔥🔥 Hot';
     return '🌿';
   }
   
   // ======================== TABLE MANAGEMENT ========================
   const TABLE_STORAGE_KEY = 'restaurant_table';
+  const TABLE_SESSION_DURATION = 4 * 60 * 60 * 1000;
   
   function saveTableToStorage(table) {
     localStorage.setItem(TABLE_STORAGE_KEY, JSON.stringify({ number: table, timestamp: Date.now() }));
@@ -256,7 +302,7 @@
     const stored = localStorage.getItem(TABLE_STORAGE_KEY);
     if (!stored) return null;
     const data = JSON.parse(stored);
-    if (Date.now() - data.timestamp > 4 * 60 * 60 * 1000) {
+    if (Date.now() - data.timestamp > TABLE_SESSION_DURATION) {
       localStorage.removeItem(TABLE_STORAGE_KEY);
       return null;
     }
@@ -271,6 +317,7 @@
       if (!isNaN(num) && num > 0 && num <= 50) {
         saveTableToStorage(num);
         tableNumber = num;
+        isTableLocked = true;
         logEvent('TABLE_DETECTED', { table: num, source: 'url' });
         const url = new URL(window.location.href);
         url.searchParams.delete('t');
@@ -287,6 +334,7 @@
       const stored = getTableFromStorage();
       if (stored) {
         tableNumber = stored;
+        isTableLocked = true;
         logEvent('TABLE_RESTORED', { table: stored, source: 'storage' });
       }
     }
@@ -299,7 +347,7 @@
   function loadCart() { const saved = localStorage.getItem(`cart_${tableNumber}`); cart = saved ? JSON.parse(saved) : []; }
   
   function addToCart(item) {
-    if (!tableNumber) { showToast('Please scan QR code first!', 'warning'); return; }
+    if (!tableNumber) { showToast('Please select a table first!', 'warning'); return; }
     const existing = cart.find(i => i.id === item.id);
     if (existing) existing.quantity++;
     else cart.push({ ...item, quantity: 1 });
@@ -309,15 +357,27 @@
     render();
   }
   
+  function removeFromCart(index) {
+    const removed = cart[index];
+    cart.splice(index, 1);
+    saveCart();
+    logEvent('REMOVE_FROM_CART', { item: removed.name });
+    showToast(`${removed.name} removed`, 'info');
+    render();
+  }
+  
   function updateQuantity(index, change) {
     const item = cart[index];
     if (item) {
       const newQty = item.quantity + change;
-      if (newQty <= 0) cart.splice(index, 1);
-      else item.quantity = newQty;
-      saveCart();
-      logEvent('UPDATE_CART', { item: item.name, quantity: newQty });
-      render();
+      if (newQty <= 0) {
+        removeFromCart(index);
+      } else {
+        item.quantity = newQty;
+        saveCart();
+        logEvent('UPDATE_CART', { item: item.name, quantity: newQty });
+        render();
+      }
     }
   }
   
@@ -331,35 +391,43 @@
     const service = subtotal * 0.05;
     const total = subtotal + cgst + sgst + service;
     const roundedTotal = Math.round(total);
-    return { subtotal, cgst, sgst, service, total: roundedTotal };
+    const roundOff = roundedTotal - total;
+    return { subtotal, cgst, sgst, service, total: roundedTotal, roundOff };
   }
   
   // ======================== ORDER PLACEMENT ========================
   async function placeOrder(paymentMethod) {
     if (cart.length === 0) { showToast('Cart is empty', 'error'); return false; }
+    if (!tableNumber) { showToast('Table not detected', 'error'); return false; }
     
     const subtotal = getCartTotal();
     const tax = calculateTotalWithTax(subtotal);
     
     const orderData = {
       tableNumber: parseInt(tableNumber),
-      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
+      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, veg: i.veg })),
       subtotal: tax.subtotal,
       cgst: tax.cgst,
       sgst: tax.sgst,
       serviceCharge: tax.service,
+      roundOff: tax.roundOff,
       totalPrice: tax.total,
       status: 'Pending',
       timestamp: new Date().toISOString(),
       estimatedTime: 20,
-      paymentMethod: paymentMethod,
+      paymentMethod: paymentMethod === 'online' ? 'Online Payment' : 'Pay at Counter',
       paymentStatus: paymentMethod === 'online' ? 'paid' : 'pending'
     };
     
     try {
       const docRef = await addDoc(collection(db, "orders"), { ...orderData, createdAt: serverTimestamp() });
+      currentOrderId = docRef.id;
       currentOrder = { id: docRef.id, ...orderData };
-      logEvent('ORDER_PLACED', { orderId: currentOrder.id, total: tax.total, payment: paymentMethod });
+      logEvent('ORDER_PLACED', { orderId: currentOrder.id, total: tax.total, payment: paymentMethod, items: cart.length });
+      
+      // Listen to real-time order status
+      listenToOrderStatus(currentOrderId);
+      
       cart = [];
       saveCart();
       showToast('Order placed successfully!', 'success');
@@ -367,22 +435,53 @@
       render();
       return true;
     } catch (error) {
-      showToast('Failed to place order', 'error');
+      console.error('Error placing order:', error);
+      showToast('Failed to place order. Please try again.', 'error');
       return false;
     }
   }
   
+  function listenToOrderStatus(orderId) {
+    if (unsubscribeOrder) unsubscribeOrder();
+    const orderRef = doc(db, "orders", orderId);
+    unsubscribeOrder = onSnapshot(orderRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const updated = { id: docSnap.id, ...docSnap.data() };
+        currentOrder = updated;
+        if (currentStep === 3) render();
+        
+        const messages = {
+          'Accepted': 'Order accepted by restaurant!',
+          'Preparing': 'Your food is being prepared!',
+          'Ready': 'Your order is ready for pickup!',
+          'Served': 'Enjoy your meal!'
+        };
+        if (messages[updated.status]) showToast(messages[updated.status], 'info');
+      }
+    });
+  }
+  
   // ======================== SERVICE REQUESTS ========================
   function requestService(type) {
-    if (!tableNumber) { showToast('Please scan QR code first!', 'warning'); return; }
-    const messages = { waiter: 'Waiter is on the way!', water: 'Water requested!', bill: 'Bill requested!' };
+    if (!tableNumber) { showToast('Please select a table first!', 'warning'); return; }
+    const messages = { 
+      waiter: '👨‍🍳 Waiter has been notified!', 
+      water: '💧 Water requested!', 
+      bill: '💰 Bill requested!' 
+    };
     showToast(messages[type], 'success');
     logEvent('SERVICE_REQUESTED', { type, table: tableNumber });
+    
     const btn = document.getElementById(`fab${type.charAt(0).toUpperCase() + type.slice(1)}`);
     if (btn) {
       btn.classList.add('requested');
       setTimeout(() => btn.classList.remove('requested'), 2000);
     }
+    
+    // Store in Firebase for admin
+    addDoc(collection(db, "service_requests"), {
+      type, tableNumber: parseInt(tableNumber), timestamp: new Date().toISOString(), status: 'pending'
+    }).catch(console.error);
   }
   
   // ======================== UI HELPERS ========================
@@ -416,63 +515,106 @@
     const cartTotal = getCartTotal();
     
     return `
-      <div class="max-w-2xl mx-auto px-4 pb-28">
+      <div class="max-w-2xl mx-auto px-4 pb-28 min-h-screen">
         <!-- Cover Image & Branding -->
-        <div class="relative rounded-2xl overflow-hidden mb-6 h-48">
+        <div class="relative rounded-2xl overflow-hidden mb-6 h-52">
           <img src="${RESTAURANT.coverImage}" class="w-full h-full object-cover">
-          <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
           <div class="absolute bottom-4 left-4 flex items-center gap-3">
             <div class="bg-white/20 backdrop-blur rounded-full p-2 text-3xl">${RESTAURANT.logo}</div>
-            <div><h1 class="text-white text-xl font-bold">${RESTAURANT.name}</h1><p class="text-white/80 text-xs">Table ${tableNumber || '?'}</p></div>
+            <div>
+              <h1 class="text-white text-2xl font-bold">${RESTAURANT.name}</h1>
+              <p class="text-white/80 text-sm flex items-center gap-1">
+                <i class="fas fa-table-alt"></i> ${tableNumber ? `Ordering from Table ${tableNumber}` : 'Select your table'}
+              </p>
+            </div>
           </div>
           <div class="absolute top-4 right-4">${renderLanguageSelector()}</div>
         </div>
         
         ${!tableNumber ? `
-          <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-5 mb-6">
-            <div class="flex items-center gap-3 mb-3"><i class="fas fa-table text-yellow-600 text-xl"></i><h3 class="font-bold">Select Your Table</h3></div>
-            <div class="grid grid-cols-5 gap-2">${Array.from({ length: 20 }, (_, i) => i + 1).map(num => `<button class="table-btn bg-white border border-gray-300 rounded-xl py-2 text-center hover:border-orange-400 transition" data-table="${num}">${num}</button>`).join('')}</div>
+          <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-2xl p-5 mb-6">
+            <div class="flex items-center gap-3 mb-3">
+              <i class="fas fa-table text-yellow-600 text-xl"></i>
+              <h3 class="font-bold text-gray-800">Select Your Table</h3>
+            </div>
+            <div class="grid grid-cols-5 gap-2">
+              ${Array.from({ length: 20 }, (_, i) => i + 1).map(num => `
+                <button class="table-btn bg-white border border-gray-200 rounded-xl py-2.5 text-center font-medium hover:border-orange-400 hover:bg-orange-50 transition" data-table="${num}">${num}</button>
+              `).join('')}
+            </div>
+            <p class="text-xs text-gray-400 text-center mt-3">
+              <i class="fas fa-qrcode mr-1"></i> Scan QR code to auto-detect table
+            </p>
           </div>
         ` : `
-          <div class="bg-green-50 border border-green-200 rounded-2xl p-4 mb-6 flex justify-between items-center">
-            <div><i class="fas fa-check-circle text-green-600"></i> <span class="font-medium">Table ${tableNumber}</span> <span class="text-xs text-green-600">(Locked)</span></div>
-            <button id="clearTableBtn" class="text-red-500 text-sm"><i class="fas fa-trash"></i> Clear</button>
+          <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-4 mb-6 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <div class="bg-green-500 rounded-full w-10 h-10 flex items-center justify-center">
+                <i class="fas fa-check text-white"></i>
+              </div>
+              <div>
+                <p class="text-sm text-green-700 font-medium">Table Confirmed</p>
+                <p class="text-xl font-bold text-green-800">Table ${tableNumber}</p>
+              </div>
+            </div>
+            <button id="clearTableBtn" class="text-red-500 text-sm hover:bg-red-50 px-3 py-1.5 rounded-full transition">
+              <i class="fas fa-trash-alt mr-1"></i> Clear
+            </button>
           </div>
         `}
         
         <!-- Category Tabs -->
         <div class="flex overflow-x-auto gap-2 mb-6 pb-2 sticky top-0 bg-gray-50 pt-2 z-10" style="scrollbar-width: none;">
           ${categories.map(cat => `
-            <button class="category-tab px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${selectedCategory === cat ? 'bg-orange-600 text-white shadow-md' : 'bg-white text-gray-600 shadow-sm'}" data-category="${cat}">${cat}</button>
+            <button class="category-tab px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition shadow-sm
+              ${selectedCategory === cat ? 'bg-orange-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100'}" 
+              data-category="${cat}">
+              ${cat === 'All' ? '<i class="fas fa-grid mr-1"></i>' : ''} ${cat}
+            </button>
           `).join('')}
         </div>
         
         <!-- Menu Grid -->
         <div class="space-y-4">
           ${filteredItems.map(item => `
-            <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition p-4 flex gap-4 menu-card" data-item='${JSON.stringify(item)}'>
-              <img src="${item.image}" class="food-image" loading="lazy" onerror="this.src='https://placehold.co/85x85/F97316/white?text=Food'">
+            <div class="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all p-4 flex gap-4 menu-card relative" data-item='${JSON.stringify(item)}'>
+              ${!item.available ? '<div class="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center z-10"><span class="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-bold">Out of Stock</span></div>' : ''}
+              <img src="${item.image}" class="food-image" loading="lazy" onerror="this.src='https://placehold.co/90x90/F97316/white?text=Food'">
               <div class="flex-1">
                 <div class="flex justify-between items-start">
                   <div>
-                    <div class="flex items-center gap-2"><span class="veg-dot ${item.veg ? 'green' : 'red'}"></span><h3 class="font-bold text-gray-800">${escapeHtml(item.name)}</h3></div>
+                    <div class="flex items-center gap-2">
+                      <span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>
+                      <h3 class="font-bold text-gray-800 text-base">${escapeHtml(item.name)}</h3>
+                    </div>
                     <div class="flex items-center gap-2 mt-1">
-                      <span class="text-xs text-gray-500">${getSpiceIcon(item.spiceLevel)} ${item.spiceLevel}</span>
-                      <span class="text-xs text-gray-500"><i class="far fa-clock"></i> ${item.prepTime} ${t('mins')}</span>
+                      <span class="text-xs text-gray-500">${getSpiceIcon(item.spiceLevel)}</span>
+                      <span class="text-xs text-gray-500"><i class="far fa-clock mr-1"></i>${item.prepTime} ${t('mins')}</span>
                     </div>
                   </div>
                   <p class="text-orange-600 font-bold text-lg">${formatCurrency(item.price)}</p>
                 </div>
-                <p class="text-gray-500 text-sm mt-1">${item.description}</p>
+                <p class="text-gray-500 text-sm mt-1 line-clamp-2">${item.description}</p>
                 <div class="flex justify-between items-center mt-3">
-                  <div class="flex gap-1">
+                  <div class="flex gap-1 flex-wrap">
+                    ${item.bestSeller ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full"><i class="fas fa-trophy"></i> Best Seller</span>' : ''}
                     ${item.popular ? '<span class="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full"><i class="fas fa-fire"></i> Popular</span>' : ''}
                     ${item.recommended ? '<span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full"><i class="fas fa-medal"></i> Chef Rec</span>' : ''}
-                    ${!item.available ? '<span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Out of Stock</span>' : ''}
                   </div>
-                  <button class="add-to-cart-btn ${!item.available ? 'opacity-50 cursor-not-allowed bg-gray-300' : 'bg-orange-600 hover:bg-orange-700'} text-white px-4 py-2 rounded-full text-sm font-semibold transition flex items-center gap-1" ${!item.available ? 'disabled' : ''}>
-                    <i class="fas fa-plus text-xs"></i> Add
-                  </button>
+                  <div class="relative">
+                    ${cart.find(i => i.id === item.id) ? `
+                      <div class="flex items-center gap-2 bg-gray-100 rounded-full p-1">
+                        <button class="quick-qty-dec w-8 h-8 rounded-full bg-white shadow-sm text-gray-600 hover:bg-orange-500 hover:text-white transition" data-id="${item.id}">-</button>
+                        <span class="w-6 text-center font-semibold">${cart.find(i => i.id === item.id).quantity}</span>
+                        <button class="quick-qty-inc w-8 h-8 rounded-full bg-white shadow-sm text-gray-600 hover:bg-orange-500 hover:text-white transition" data-id="${item.id}">+</button>
+                      </div>
+                    ` : `
+                      <button class="add-to-cart-btn ${!item.available ? 'opacity-50 cursor-not-allowed bg-gray-300' : 'bg-orange-600 hover:bg-orange-700'} text-white px-4 py-2 rounded-full text-sm font-semibold transition flex items-center gap-1" ${!item.available ? 'disabled' : ''}>
+                        <i class="fas fa-plus text-xs"></i> Add
+                      </button>
+                    `}
+                  </div>
                 </div>
               </div>
             </div>
@@ -485,12 +627,15 @@
             <div class="bg-white rounded-2xl shadow-2xl p-4 border border-gray-100 animate-slide-up">
               <div class="flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                  <div class="bg-orange-100 rounded-full w-12 h-12 flex items-center justify-center">
-                    <i class="fas fa-shopping-bag text-orange-600 text-xl"></i>
+                  <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center shadow-md">
+                    <i class="fas fa-shopping-bag text-white text-xl"></i>
                   </div>
-                  <div><span class="font-bold text-gray-800">${cartCount} item${cartCount > 1 ? 's' : ''}</span><span class="text-orange-600 font-bold ml-2 text-lg">${formatCurrency(cartTotal)}</span></div>
+                  <div>
+                    <span class="font-bold text-gray-800 text-lg">${cartCount} item${cartCount > 1 ? 's' : ''}</span>
+                    <span class="text-orange-600 font-bold ml-2 text-xl">${formatCurrency(cartTotal)}</span>
+                  </div>
                 </div>
-                <button id="viewCartBtn" class="bg-orange-600 text-white px-6 py-2.5 rounded-full font-bold hover:bg-orange-700 transition">Review →</button>
+                <button id="viewCartBtn" class="bg-gradient-to-r from-orange-600 to-orange-500 text-white px-6 py-2.5 rounded-full font-bold hover:shadow-lg transition">Review Order →</button>
               </div>
             </div>
           </div>
@@ -513,92 +658,195 @@
     if (cart.length === 0) {
       return `
         <div class="min-h-screen flex items-center justify-center px-4">
-          <div class="text-center"><i class="fas fa-shopping-cart text-5xl text-gray-300 mb-4"></i><h2 class="text-xl font-bold">Cart is empty</h2><button id="backBtn" class="mt-4 bg-orange-600 text-white px-6 py-2 rounded-full">Browse Menu</button></div>
+          <div class="bg-white rounded-2xl p-8 text-center max-w-md shadow-sm">
+            <div class="bg-gray-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-shopping-cart text-4xl text-gray-400"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800">Your cart is empty</h2>
+            <p class="text-gray-500 mt-2">Add delicious items from the menu</p>
+            <button id="backBtn" class="mt-6 bg-orange-600 text-white px-6 py-2.5 rounded-full font-semibold hover:bg-orange-700 transition inline-flex items-center gap-2">
+              <i class="fas fa-arrow-left"></i> Browse Menu
+            </button>
+          </div>
         </div>
       `;
     }
     
     return `
-      <div class="max-w-2xl mx-auto px-4 py-5 pb-28">
-        <div class="flex items-center gap-4 mb-6"><button id="backBtn" class="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center"><i class="fas fa-arrow-left"></i></button><h1 class="text-2xl font-bold">Your Cart</h1>${tableNumber ? `<span class="text-sm bg-orange-100 px-3 py-1 rounded-full ml-auto">Table ${tableNumber}</span>` : ''}</div>
+      <div class="max-w-2xl mx-auto px-4 py-5 pb-28 min-h-screen">
+        <div class="flex items-center gap-4 mb-6">
+          <button id="backBtn" class="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center text-gray-600 hover:text-orange-600 transition">
+            <i class="fas fa-arrow-left text-lg"></i>
+          </button>
+          <h1 class="text-2xl font-bold text-gray-800">Your Cart</h1>
+          ${tableNumber ? `<span class="text-sm bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700 px-3 py-1 rounded-full ml-auto font-medium shadow-sm">Table ${tableNumber}</span>` : ''}
+        </div>
         
         <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
           ${cart.map((item, idx) => `
-            <div class="flex items-center gap-3 p-4 border-b last:border-0">
+            <div class="flex items-center gap-3 p-4 border-b last:border-0 hover:bg-gray-50 transition">
               <img src="${item.image}" class="w-14 h-14 rounded-xl object-cover">
-              <div class="flex-1"><h3 class="font-bold">${item.name}</h3><p class="text-orange-600">${formatCurrency(item.price)}</p></div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>
+                  <h3 class="font-bold text-gray-800">${item.name}</h3>
+                </div>
+                <p class="text-orange-600 font-semibold">${formatCurrency(item.price)}</p>
+              </div>
               <div class="flex items-center gap-2">
-                <button class="qty-dec w-8 h-8 rounded-full bg-gray-100" data-index="${idx}">-</button>
-                <span class="w-8 text-center font-semibold">${item.quantity}</span>
-                <button class="qty-inc w-8 h-8 rounded-full bg-gray-100" data-index="${idx}">+</button>
-                <button class="remove-item w-8 h-8 rounded-full bg-red-50 text-red-500" data-index="${idx}"><i class="fas fa-trash-alt"></i></button>
+                <button class="qty-dec w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition flex items-center justify-center" data-index="${idx}">
+                  <i class="fas fa-minus text-sm"></i>
+                </button>
+                <span class="font-bold w-8 text-center text-gray-800 text-lg">${item.quantity}</span>
+                <button class="qty-inc w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-orange-100 hover:text-orange-600 transition flex items-center justify-center" data-index="${idx}">
+                  <i class="fas fa-plus text-sm"></i>
+                </button>
+                <button class="remove-item w-8 h-8 rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition flex items-center justify-center" data-index="${idx}">
+                  <i class="fas fa-trash-alt text-sm"></i>
+                </button>
               </div>
             </div>
           `).join('')}
         </div>
         
         <div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
-          <h3 class="font-bold mb-3">Bill Summary</h3>
+          <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <i class="fas fa-file-invoice-dollar text-orange-600"></i> Bill Summary
+          </h3>
           <div class="space-y-2">
-            <div class="flex justify-between"><span>Subtotal</span><span>${formatCurrency(tax.subtotal)}</span></div>
-            <div class="flex justify-between text-sm"><span>CGST (2.5%)</span><span>${formatCurrency(tax.cgst)}</span></div>
-            <div class="flex justify-between text-sm"><span>SGST (2.5%)</span><span>${formatCurrency(tax.sgst)}</span></div>
-            <div class="flex justify-between text-sm"><span>Service Charge (5%)</span><span>${formatCurrency(tax.service)}</span></div>
-            <div class="border-t pt-2 mt-2"><div class="flex justify-between font-bold"><span>Total</span><span class="text-orange-600 text-xl">${formatCurrency(tax.total)}</span></div></div>
+            <div class="flex justify-between pb-2 border-b">
+              <span class="text-gray-600">Subtotal</span>
+              <span class="font-semibold">${formatCurrency(tax.subtotal)}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">CGST (2.5%)</span>
+              <span class="font-medium">${formatCurrency(tax.cgst)}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">SGST (2.5%)</span>
+              <span class="font-medium">${formatCurrency(tax.sgst)}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Service Charge (5%)</span>
+              <span class="font-medium">${formatCurrency(tax.service)}</span>
+            </div>
+            ${tax.roundOff !== 0 ? `
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Round Off</span>
+                <span class="font-medium">${tax.roundOff > 0 ? '+' : ''}${formatCurrency(tax.roundOff)}</span>
+              </div>
+            ` : ''}
+            <div class="border-t-2 border-dashed pt-3 mt-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xl font-bold text-gray-800">Total Amount</span>
+                <span class="text-2xl font-bold text-orange-600">${formatCurrency(tax.total)}</span>
+              </div>
+            </div>
           </div>
+          <p class="text-xs text-gray-400 mt-2"><i class="fas fa-info-circle mr-1"></i> GST included (5% total)</p>
         </div>
         
         <div class="flex gap-3">
-          <button id="payOnlineBtn" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold">Pay Online</button>
-          <button id="payCounterBtn" class="flex-1 bg-green-600 text-white py-4 rounded-xl font-bold">Pay at Counter</button>
+          <button id="payOnlineBtn" class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl font-bold hover:shadow-lg transition flex items-center justify-center gap-2">
+            <i class="fas fa-credit-card"></i> Pay Online
+          </button>
+          <button id="payCounterBtn" class="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl font-bold hover:shadow-lg transition flex items-center justify-center gap-2">
+            <i class="fas fa-building"></i> Pay at Counter
+          </button>
         </div>
+        
+        <p class="text-center text-xs text-gray-400 mt-4">
+          <i class="fas fa-clock mr-1"></i> Estimated preparation time: 15-20 mins
+        </p>
       </div>
     `;
   }
   
   function renderConfirmationStep() {
-    if (!currentOrder) return `<div class="min-h-screen flex items-center justify-center"><div class="loading-spinner"></div><p class="mt-4">Loading order...</p></div>`;
+    if (!currentOrder) {
+      return `<div class="min-h-screen flex items-center justify-center"><div class="loading-spinner mx-auto"></div><p class="mt-4">Loading order details...</p></div>`;
+    }
     
     const statusSteps = ['Pending', 'Accepted', 'Preparing', 'Ready', 'Served'];
     const currentIdx = statusSteps.indexOf(currentOrder.status);
+    const orderDate = new Date(currentOrder.timestamp).toLocaleString();
     
     return `
       <div class="min-h-screen bg-gradient-to-b from-orange-50 to-white py-8 px-4">
-        <div class="max-w-2xl mx-auto text-center">
-          <div class="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 animate-bounce">
-            <i class="fas fa-check-circle text-4xl text-green-600"></i>
-          </div>
-          <h1 class="text-2xl font-bold">Order Confirmed!</h1>
-          <p class="text-gray-500 mt-1">Order #${currentOrder.id.slice(-8)}</p>
-          <div class="flex justify-center gap-2 mt-2">
-            <div class="inline-block bg-orange-100 px-4 py-1 rounded-full"><i class="fas fa-table mr-1 text-orange-600"></i>Table ${currentOrder.tableNumber}</div>
-            <div class="inline-block bg-gray-100 px-4 py-1 rounded-full"><i class="fas ${currentOrder.paymentMethod === 'online' ? 'fa-credit-card' : 'fa-building'} mr-1"></i>${currentOrder.paymentMethod === 'online' ? 'Paid Online' : 'Pay at Counter'}</div>
-          </div>
-          
-          <div class="bg-white rounded-2xl shadow-xl p-6 mt-6">
-            <div class="relative">
-              <div class="status-line"><div class="status-line-fill" style="width: ${(currentIdx / (statusSteps.length - 1)) * 100}%"></div></div>
-              <div class="relative flex justify-between">
-                ${statusSteps.map((step, idx) => `
-                  <div class="status-step">
-                    <div class="status-dot ${idx < currentIdx ? 'completed' : idx === currentIdx ? 'active' : ''}">
-                      <i class="fas ${idx === 0 ? 'fa-receipt' : idx === 1 ? 'fa-check' : idx === 2 ? 'fa-fire' : idx === 3 ? 'fa-bell' : 'fa-smile'}"></i>
-                    </div>
-                    <p class="text-xs font-medium ${idx === currentIdx ? 'text-orange-600' : 'text-gray-400'}">${step}</p>
-                  </div>
-                `).join('')}
+        <div class="max-w-2xl mx-auto">
+          <!-- Celebration Card -->
+          <div class="bg-white rounded-2xl shadow-xl overflow-hidden mb-6">
+            <div class="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-center">
+              <div class="bg-white rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-3 animate-bounce">
+                <i class="fas fa-check-circle text-4xl text-green-600"></i>
+              </div>
+              <h1 class="text-2xl font-bold text-white">Order Confirmed! 🎉</h1>
+              <p class="text-green-100 mt-1">Order #${currentOrder.id.slice(-8)}</p>
+              <div class="flex justify-center gap-2 mt-3">
+                <span class="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-sm"><i class="fas fa-table mr-1"></i>Table ${currentOrder.tableNumber}</span>
+                <span class="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-sm"><i class="fas ${currentOrder.paymentMethod === 'Online Payment' ? 'fa-credit-card' : 'fa-building'} mr-1"></i>${currentOrder.paymentMethod}</span>
               </div>
             </div>
-            <p class="text-sm text-gray-500 mt-4"><i class="far fa-clock"></i> Estimated: ${currentOrder.estimatedTime} mins</p>
+            
+            <!-- Order Status Tracker -->
+            <div class="p-6">
+              <h3 class="font-bold text-gray-700 mb-6 text-center">Track Your Order</h3>
+              <div class="relative">
+                <div class="status-line"></div>
+                <div class="status-line-fill" style="width: ${(currentIdx / (statusSteps.length - 1)) * 100}%"></div>
+                <div class="relative flex justify-between">
+                  ${statusSteps.map((step, idx) => `
+                    <div class="status-step">
+                      <div class="status-dot ${idx < currentIdx ? 'completed' : idx === currentIdx ? 'active' : ''}">
+                        <i class="fas ${idx === 0 ? 'fa-receipt' : idx === 1 ? 'fa-check' : idx === 2 ? 'fa-fire' : idx === 3 ? 'fa-bell' : 'fa-smile'}"></i>
+                      </div>
+                      <p class="text-xs font-semibold ${idx === currentIdx ? 'text-orange-600' : 'text-gray-400'}">${step}</p>
+                      <p class="text-xs text-gray-400 mt-1 hidden sm:block">
+                        ${step === 'Pending' ? 'Order received' : step === 'Accepted' ? 'Restaurant accepted' : step === 'Preparing' ? 'Being cooked' : step === 'Ready' ? 'Ready to serve' : 'Enjoy!'}
+                      </p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <p class="text-center text-sm text-gray-500 mt-6">
+                <i class="far fa-clock mr-1"></i> Estimated: ${currentOrder.estimatedTime || 20} minutes
+              </p>
+            </div>
           </div>
           
-          <div class="bg-white rounded-2xl p-5 mt-4 text-left">
-            <h3 class="font-bold mb-3">Order Summary</h3>
-            ${currentOrder.items.map(item => `<div class="flex justify-between text-sm py-1"><span>${item.name} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}
-            <div class="border-t pt-2 mt-2"><div class="flex justify-between font-bold"><span>Total</span><span class="text-orange-600">${formatCurrency(currentOrder.totalPrice)}</span></div></div>
+          <!-- Order Summary -->
+          <div class="bg-white rounded-2xl shadow-xl p-5 mb-6">
+            <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <i class="fas fa-receipt text-orange-600"></i> Order Summary
+            </h3>
+            <div class="space-y-2 max-h-64 overflow-y-auto">
+              ${currentOrder.items.map(item => `
+                <div class="flex justify-between text-sm py-1">
+                  <span><span class="font-medium">${item.name}</span> <span class="text-gray-500">x${item.quantity}</span></span>
+                  <span class="font-semibold">${formatCurrency(item.price * item.quantity)}</span>
+                </div>
+              `).join('')}
+            </div>
+            <div class="border-t pt-3 mt-3 space-y-1">
+              <div class="flex justify-between text-sm"><span>Subtotal</span><span>${formatCurrency(currentOrder.subtotal)}</span></div>
+              <div class="flex justify-between text-sm"><span>CGST</span><span>${formatCurrency(currentOrder.cgst)}</span></div>
+              <div class="flex justify-between text-sm"><span>SGST</span><span>${formatCurrency(currentOrder.sgst)}</span></div>
+              <div class="flex justify-between text-sm"><span>Service Charge</span><span>${formatCurrency(currentOrder.serviceCharge)}</span></div>
+              ${currentOrder.roundOff !== 0 ? `<div class="flex justify-between text-sm"><span>Round Off</span><span>${currentOrder.roundOff > 0 ? '+' : ''}${formatCurrency(currentOrder.roundOff)}</span></div>` : ''}
+              <div class="flex justify-between font-bold text-base mt-2 pt-1 border-t">
+                <span>Total Paid</span>
+                <span class="text-orange-600 text-lg">${formatCurrency(currentOrder.totalPrice)}</span>
+              </div>
+            </div>
           </div>
           
-          <button id="newOrderBtn" class="mt-6 bg-orange-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-orange-700 transition">New Order</button>
+          <button id="newOrderBtn" class="w-full bg-gradient-to-r from-orange-600 to-orange-500 text-white py-3 rounded-xl font-bold hover:shadow-lg transition flex items-center justify-center gap-2">
+            <i class="fas fa-plus"></i> New Order
+          </button>
+          
+          <p class="text-center text-xs text-gray-400 mt-4">
+            <i class="fas fa-heart text-red-400"></i> Thank you for dining with us!
+          </p>
         </div>
       </div>
     `;
@@ -620,6 +868,7 @@
     document.querySelectorAll('.table-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         tableNumber = parseInt(btn.dataset.table);
+        isTableLocked = true;
         saveTableToStorage(tableNumber);
         logEvent('TABLE_SELECTED', { table: tableNumber });
         showToast(`Table ${tableNumber} selected!`, 'success');
@@ -628,9 +877,10 @@
     });
     
     document.getElementById('clearTableBtn')?.addEventListener('click', () => {
-      if (confirm('Clear table session? Cart will reset.')) {
+      if (confirm('Clear table session? Your cart will be reset.')) {
         localStorage.removeItem(TABLE_STORAGE_KEY);
         tableNumber = null;
+        isTableLocked = false;
         cart = [];
         saveCart();
         logEvent('TABLE_CLEARED', {});
@@ -660,6 +910,27 @@
       });
     });
     
+    // Quick quantity adjustment on menu card
+    document.querySelectorAll('.quick-qty-inc').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const itemId = parseInt(btn.dataset.id);
+        const item = MENU_ITEMS.find(i => i.id === itemId);
+        if (item) addToCart(item);
+      });
+    });
+    
+    document.querySelectorAll('.quick-qty-dec').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const itemId = parseInt(btn.dataset.id);
+        const cartItemIndex = cart.findIndex(i => i.id === itemId);
+        if (cartItemIndex !== -1) {
+          updateQuantity(cartItemIndex, -1);
+        }
+      });
+    });
+    
     // Navigation
     document.getElementById('viewCartBtn')?.addEventListener('click', () => { currentStep = 2; render(); });
     document.getElementById('backBtn')?.addEventListener('click', () => { currentStep = 1; render(); });
@@ -672,7 +943,7 @@
       btn.addEventListener('click', () => updateQuantity(parseInt(btn.dataset.index), -1));
     });
     document.querySelectorAll('.remove-item').forEach(btn => {
-      btn.addEventListener('click', () => updateQuantity(parseInt(btn.dataset.index), -999));
+      btn.addEventListener('click', () => removeFromCart(parseInt(btn.dataset.index)));
     });
     
     // Payment
@@ -681,7 +952,9 @@
     
     // New order
     document.getElementById('newOrderBtn')?.addEventListener('click', () => {
+      if (unsubscribeOrder) unsubscribeOrder();
       currentOrder = null;
+      currentOrderId = null;
       currentStep = 1;
       render();
     });
@@ -704,7 +977,7 @@
   function init() {
     initializeTable();
     loadCart();
-    logEvent('APP_STARTED', { version: '2.0' });
+    logEvent('APP_STARTED', { version: '3.0' });
     render();
   }
   
