@@ -12,12 +12,10 @@
     * { font-family: 'Inter', sans-serif; }
     body { background: #f1f5f9; }
     
-    /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
     
-    /* Animations */
     @keyframes slideIn {
       from { opacity: 0; transform: translateX(20px); }
       to { opacity: 1; transform: translateX(0); }
@@ -26,52 +24,31 @@
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.05); }
     }
-    @keyframes ring {
-      0% { transform: rotate(0); }
-      25% { transform: rotate(15deg); }
-      75% { transform: rotate(-15deg); }
-      100% { transform: rotate(0); }
-    }
     
     .order-card { animation: slideIn 0.3s ease-out; }
     .new-order-alert { animation: pulse 0.5s ease-in-out; }
-    .notification-ring { animation: ring 0.5s ease-in-out; }
     
-    /* Dark Mode */
-    .dark-mode {
-      background: #0f172a;
-      color: #f1f5f9;
-    }
+    .dark-mode { background: #0f172a; color: #f1f5f9; }
     .dark-mode .bg-white { background: #1e293b; }
     .dark-mode .bg-gray-50 { background: #0f172a; }
     .dark-mode .text-gray-600 { color: #94a3b8; }
     .dark-mode .border-gray-200 { border-color: #334155; }
     
-    /* Kitchen Mode */
-    .kitchen-mode {
-      background: #0a0a0a;
-    }
-    .kitchen-mode .order-card {
-      background: #1a1a1a;
-      border: 1px solid #333;
-    }
-    .kitchen-mode .order-card h3,
-    .kitchen-mode .order-card p {
-      color: #fff;
+    .kitchen-mode { background: #0a0a0a; }
+    .kitchen-mode .order-card { background: #1a1a1a; border: 1px solid #333; }
+    .kitchen-mode .order-card h3, .kitchen-mode .order-card p { color: #fff; }
+    
+    .toast-notification {
+      position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white;
+      padding: 12px 20px; border-radius: 12px; z-index: 1000;
+      animation: slideIn 0.3s ease-out; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
     }
     
-    /* Toast Notification */
-    .toast-notification {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #1f2937;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 12px;
-      z-index: 1000;
-      animation: slideIn 0.3s ease-out;
-      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    @media print {
+      body * { visibility: hidden; }
+      .print-bill, .print-bill * { visibility: visible; }
+      .print-bill { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background: white; }
+      .no-print { display: none; }
     }
   </style>
 </head>
@@ -79,7 +56,6 @@
 <div id="admin-dashboard"></div>
 
 <script type="module">
-  // ======================== FIREBASE CONFIGURATION ========================
   const firebaseConfig = {
     apiKey: "AIzaSyDnTl39uYi-NHhBEMeObezN2Uyqkk8sk6Q",
     authDomain: "qrdines-829b7.firebaseapp.com",
@@ -92,25 +68,10 @@
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    updateDoc, 
-    deleteDoc, 
-    doc, 
-    onSnapshot, 
-    query, 
-    where, 
-    orderBy, 
-    serverTimestamp,
-    getDocs
+    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot,
+    query, where, orderBy, serverTimestamp, getDocs
   } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-  import {
-    getAuth,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -118,722 +79,274 @@
   
   // ======================== LOGGING SYSTEM ========================
   let activityLogs = [];
-  
   function addLog(action, details) {
-    const log = {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      action: action,
-      details: details,
-      user: currentUser?.email || 'admin'
-    };
+    const log = { id: Date.now(), timestamp: new Date().toISOString(), action, details, user: currentUser?.email || 'admin' };
     activityLogs.unshift(log);
-    if (activityLogs.length > 100) activityLogs.pop();
-    console.log(`[${log.timestamp}] ${action}:`, details);
-    
-    // Save to localStorage
+    if (activityLogs.length > 200) activityLogs.pop();
     localStorage.setItem('admin_activity_logs', JSON.stringify(activityLogs));
   }
+  function loadLogs() { const saved = localStorage.getItem('admin_activity_logs'); if (saved) activityLogs = JSON.parse(saved); }
   
-  function loadLogs() {
-    const saved = localStorage.getItem('admin_activity_logs');
-    if (saved) activityLogs = JSON.parse(saved);
-  }
-  
-  // ======================== SOUND NOTIFICATIONS ========================
   function playSound(type) {
-    // Use Web Audio API for beep sounds
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
-    
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
-    
-    if (type === 'order') {
-      oscillator.frequency.value = 880;
-      gainNode.gain.value = 0.3;
-      oscillator.start();
-      setTimeout(() => {
-        oscillator.stop();
-        audioContext.close();
-      }, 300);
-    } else if (type === 'request') {
-      oscillator.frequency.value = 440;
-      gainNode.gain.value = 0.3;
-      oscillator.start();
-      setTimeout(() => {
-        oscillator.stop();
-        audioContext.close();
-      }, 500);
-    }
+    if (type === 'order') { oscillator.frequency.value = 880; gainNode.gain.value = 0.3; oscillator.start(); setTimeout(() => { oscillator.stop(); audioContext.close(); }, 300); }
+    else if (type === 'request') { oscillator.frequency.value = 440; gainNode.gain.value = 0.3; oscillator.start(); setTimeout(() => { oscillator.stop(); audioContext.close(); }, 500); }
   }
   
   // ======================== GLOBAL STATE ========================
-  let currentUser = null;
-  let isLoggedIn = false;
-  let userRole = 'admin';
-  let currentView = 'dashboard';
-  let darkMode = localStorage.getItem('darkMode') === 'true';
-  let kitchenMode = false;
-  let showLogs = false;
-  let showAnalytics = false;
-  let showTableMap = false;
+  let currentUser = null, isLoggedIn = false, userRole = 'admin', currentView = 'dashboard';
+  let darkMode = localStorage.getItem('darkMode') === 'true', kitchenMode = false;
+  let orders = [], menuItems = [], tables = [], serviceRequests = [], orderHistory = [];
+  let selectedMonth = new Date().getMonth();
+  let selectedYear = new Date().getFullYear();
+  let dateFilter = 'today';
+  let comparisonView = false;
   
-  // Data
-  let orders = [];
-  let menuItems = [];
-  let tables = [];
-  let serviceRequests = [];
+  for (let i = 1; i <= 20; i++) tables.push({ id: i, status: 'free', currentOrder: null });
   
-  // Initialize tables (1-20)
-  for (let i = 1; i <= 20; i++) {
-    tables.push({ id: i, status: 'free', currentOrder: null });
-  }
-  
-  // Default menu items
   const DEFAULT_MENU = [
-    { id: 1, name: "Paneer Tikka", price: 220, category: "Starters", veg: true, available: true, prepTime: 15, image: "🍽️" },
-    { id: 2, name: "Chicken 65", price: 280, category: "Starters", veg: false, available: true, prepTime: 12, image: "🍗" },
-    { id: 3, name: "Chicken Biryani", price: 320, category: "Main Course", veg: false, available: true, prepTime: 20, image: "🍛" },
-    { id: 4, name: "Veg Biryani", price: 250, category: "Main Course", veg: true, available: true, prepTime: 18, image: "🥘" },
-    { id: 5, name: "Butter Naan", price: 45, category: "Breads", veg: true, available: true, prepTime: 5, image: "🥖" },
-    { id: 6, name: "Mango Lassi", price: 90, category: "Beverages", veg: true, available: true, prepTime: 3, image: "🥭" },
-    { id: 7, name: "Gulab Jamun", price: 80, category: "Desserts", veg: true, available: true, prepTime: 5, image: "🍨" }
+    { id: 1, name: "Paneer Tikka", price: 220, category: "Starters", veg: true, available: true, prepTime: 15, image: "🍽️", orders: 45 },
+    { id: 2, name: "Chicken 65", price: 280, category: "Starters", veg: false, available: true, prepTime: 12, image: "🍗", orders: 38 },
+    { id: 3, name: "Chicken Biryani", price: 320, category: "Main Course", veg: false, available: true, prepTime: 20, image: "🍛", orders: 52 },
+    { id: 4, name: "Veg Biryani", price: 250, category: "Main Course", veg: true, available: true, prepTime: 18, image: "🥘", orders: 30 },
+    { id: 5, name: "Butter Naan", price: 45, category: "Breads", veg: true, available: true, prepTime: 5, image: "🥖", orders: 28 },
+    { id: 6, name: "Mango Lassi", price: 90, category: "Beverages", veg: true, available: true, prepTime: 3, image: "🥭", orders: 25 },
+    { id: 7, name: "Gulab Jamun", price: 80, category: "Desserts", veg: true, available: true, prepTime: 5, image: "🍨", orders: 22 }
   ];
   
-  // Sample orders for demo
   const SAMPLE_ORDERS = [
     { id: 'ORD001', tableNumber: 5, items: [{ name: "Paneer Tikka", quantity: 2, price: 220 }], totalPrice: 440, status: 'Pending', timestamp: new Date().toISOString(), elapsed: '2 min' },
     { id: 'ORD002', tableNumber: 3, items: [{ name: "Chicken Biryani", quantity: 1, price: 320 }, { name: "Mango Lassi", quantity: 2, price: 90 }], totalPrice: 500, status: 'Preparing', timestamp: new Date(Date.now() - 5*60000).toISOString(), elapsed: '5 min' },
     { id: 'ORD003', tableNumber: 8, items: [{ name: "Veg Biryani", quantity: 1, price: 250 }], totalPrice: 250, status: 'Ready', timestamp: new Date(Date.now() - 10*60000).toISOString(), elapsed: '10 min' }
   ];
   
-  // Sample service requests
+  for (let i = 1; i <= 30; i++) {
+    let date = new Date(2024, selectedMonth, i);
+    if (date.getMonth() === selectedMonth) {
+      orderHistory.push({ id: `ORD${i}`, date: date.toISOString(), totalPrice: Math.floor(Math.random() * 5000) + 1000, items: 3 });
+    }
+  }
+  
   const SAMPLE_REQUESTS = [
     { id: 1, tableNumber: 5, type: 'waiter', status: 'pending', timestamp: new Date().toISOString() },
     { id: 2, tableNumber: 8, type: 'water', status: 'pending', timestamp: new Date().toISOString() }
   ];
   
-  // ======================== DATA LOADING ========================
-  function loadOrders() {
-    // For demo, use sample data
-    orders = [...SAMPLE_ORDERS];
-    if (currentView === 'dashboard' || currentView === 'orders') render();
-  }
+  function loadOrders() { orders = [...SAMPLE_ORDERS]; if (currentView === 'dashboard' || currentView === 'orders') render(); }
+  function loadMenu() { const stored = localStorage.getItem('restaurant_menu'); menuItems = stored ? JSON.parse(stored) : [...DEFAULT_MENU]; }
+  function loadServiceRequests() { serviceRequests = [...SAMPLE_REQUESTS]; }
   
-  function loadMenu() {
-    const stored = localStorage.getItem('restaurant_menu');
-    if (stored) {
-      menuItems = JSON.parse(stored);
-    } else {
-      menuItems = [...DEFAULT_MENU];
-      localStorage.setItem('restaurant_menu', JSON.stringify(menuItems));
-    }
-  }
-  
-  function loadServiceRequests() {
-    serviceRequests = [...SAMPLE_REQUESTS];
-  }
-  
-  // ======================== ORDER MANAGEMENT ========================
   function updateOrderStatus(orderId, newStatus) {
     const order = orders.find(o => o.id === orderId);
-    if (order) {
-      order.status = newStatus;
-      addLog('ORDER_STATUS_UPDATED', { orderId, status: newStatus, table: order.tableNumber });
-      showNotification(`Order #${orderId.slice(-6)} marked as ${newStatus}`, 'info');
-      render();
-    }
+    if (order) { order.status = newStatus; addLog('ORDER_STATUS_UPDATED', { orderId, status: newStatus, table: order.tableNumber }); showNotification(`Order #${orderId.slice(-6)} marked as ${newStatus}`, 'info'); render(); }
   }
   
   function addTestOrder() {
-    const newOrder = {
-      id: 'ORD' + Date.now(),
-      tableNumber: Math.floor(Math.random() * 20) + 1,
-      items: [{ name: "Paneer Tikka", quantity: 2, price: 220 }],
-      totalPrice: 440,
-      status: 'Pending',
-      timestamp: new Date().toISOString(),
-      elapsed: '0 min'
-    };
-    orders.unshift(newOrder);
-    addLog('TEST_ORDER_ADDED', { orderId: newOrder.id, table: newOrder.tableNumber });
-    playSound('order');
-    showNotification(`New order from Table ${newOrder.tableNumber}!`, 'success');
-    render();
+    const newOrder = { id: 'ORD' + Date.now(), tableNumber: Math.floor(Math.random() * 20) + 1, items: [{ name: "Paneer Tikka", quantity: 2, price: 220 }], totalPrice: 440, status: 'Pending', timestamp: new Date().toISOString(), elapsed: '0 min' };
+    orders.unshift(newOrder); addLog('TEST_ORDER_ADDED', { orderId: newOrder.id, table: newOrder.tableNumber }); playSound('order'); showNotification(`New order from Table ${newOrder.tableNumber}!`, 'success'); render();
   }
   
-  function resolveServiceRequest(requestId) {
-    serviceRequests = serviceRequests.filter(r => r.id !== requestId);
-    addLog('SERVICE_REQUEST_RESOLVED', { requestId });
-    render();
-  }
+  function resolveServiceRequest(requestId) { serviceRequests = serviceRequests.filter(r => r.id !== requestId); addLog('SERVICE_REQUEST_RESOLVED', { requestId }); render(); }
   
-  // ======================== TABLE MANAGEMENT ========================
   function getTableStatus() {
-    // Update table status based on orders
-    tables.forEach(table => {
-      const activeOrder = orders.find(o => o.tableNumber === table.id && o.status !== 'Served' && o.status !== 'Declined');
-      table.status = activeOrder ? 'occupied' : 'free';
-      table.currentOrder = activeOrder;
-    });
+    tables.forEach(table => { const activeOrder = orders.find(o => o.tableNumber === table.id && o.status !== 'Served' && o.status !== 'Declined'); table.status = activeOrder ? 'occupied' : 'free'; table.currentOrder = activeOrder; });
     return tables;
   }
   
-  // ======================== MENU MANAGEMENT ========================
-  function addMenuItem(itemData) {
-    const newId = Date.now();
-    const newItem = { id: newId, ...itemData };
-    menuItems.push(newItem);
-    localStorage.setItem('restaurant_menu', JSON.stringify(menuItems));
-    addLog('MENU_ITEM_ADDED', { item: itemData.name });
-    showNotification(`"${itemData.name}" added to menu`, 'success');
-    render();
+  function addMenuItem(itemData) { const newId = Date.now(); const newItem = { id: newId, ...itemData }; menuItems.push(newItem); localStorage.setItem('restaurant_menu', JSON.stringify(menuItems)); addLog('MENU_ITEM_ADDED', { item: itemData.name }); showNotification(`"${itemData.name}" added`, 'success'); render(); }
+  function updateMenuItem(id, updates) { const index = menuItems.findIndex(i => i.id == id); if (index !== -1) { menuItems[index] = { ...menuItems[index], ...updates }; localStorage.setItem('restaurant_menu', JSON.stringify(menuItems)); addLog('MENU_ITEM_UPDATED', { id, updates }); showNotification('Item updated', 'success'); render(); } }
+  function deleteMenuItem(id, name) { if (confirm(`Delete "${name}"?`)) { menuItems = menuItems.filter(i => i.id != id); localStorage.setItem('restaurant_menu', JSON.stringify(menuItems)); addLog('MENU_ITEM_DELETED', { id, name }); showNotification(`"${name}" deleted`, 'info'); render(); } }
+  function toggleAvailability(id, currentStatus) { updateMenuItem(id, { available: !currentStatus }); }
+  
+  function printBill(order) {
+    const printWindow = window.open('', '_blank');
+    const date = new Date(order.timestamp).toLocaleString();
+    printWindow.document.write(`
+      <!DOCTYPE html><html><head><title>Bill #${order.id.slice(-6)}</title>
+      <style>body{font-family:Arial;padding:20px;}.bill{max-width:400px;margin:0 auto;}.header{text-align:center;border-bottom:2px solid #333;padding-bottom:10px;margin-bottom:20px;}table{width:100%;border-collapse:collapse;}th,td{padding:8px;text-align:left;border-bottom:1px solid #ddd;}.total{font-weight:bold;margin-top:10px;}.footer{text-align:center;margin-top:30px;font-size:12px;color:#666;}</style>
+      </head><body><div class="bill"><div class="header"><h1>QR Dine Restaurant</h1><p>Digital Restaurant Bill</p></div>
+      <p><strong>Bill No:</strong> ${order.id.slice(-6)}</p><p><strong>Table:</strong> ${order.tableNumber}</p><p><strong>Date:</strong> ${date}</p>
+      <table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>
+      ${order.items.map(item => `<tr><td>${item.name}</td><td>${item.quantity}</td><td>₹${item.price}</td><td>₹${item.price * item.quantity}</td></tr>`).join('')}
+      </tbody></table><div class="total"><p>Total: ₹${order.totalPrice}</p></div><div class="footer"><p>Thank you for dining with us!</p><p>** Computer generated bill **</p></div></div>
+      <script>window.print();setTimeout(function(){window.close();}, 1000);<\/script></body></html>
+    `);
+    printWindow.document.close();
   }
   
-  function updateMenuItem(id, updates) {
-    const index = menuItems.findIndex(i => i.id == id);
-    if (index !== -1) {
-      menuItems[index] = { ...menuItems[index], ...updates };
-      localStorage.setItem('restaurant_menu', JSON.stringify(menuItems));
-      addLog('MENU_ITEM_UPDATED', { id, updates });
-      showNotification('Menu item updated', 'success');
-      render();
-    }
-  }
-  
-  function deleteMenuItem(id, name) {
-    if (confirm(`Delete "${name}"?`)) {
-      menuItems = menuItems.filter(i => i.id != id);
-      localStorage.setItem('restaurant_menu', JSON.stringify(menuItems));
-      addLog('MENU_ITEM_DELETED', { id, name });
-      showNotification(`"${name}" deleted`, 'info');
-      render();
-    }
-  }
-  
-  function toggleAvailability(id, currentStatus) {
-    updateMenuItem(id, { available: !currentStatus });
-  }
-  
-  // ======================== STATISTICS ========================
   function getStats() {
     const today = new Date().toDateString();
     const todayOrders = orders.filter(o => new Date(o.timestamp).toDateString() === today);
-    const activeOrders = orders.filter(o => o.status === 'Pending' || o.status === 'Preparing' || o.status === 'Ready');
+    const activeOrders = orders.filter(o => ['Pending', 'Preparing', 'Ready'].includes(o.status));
     const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const monthlyRevenue = orderHistory.filter(o => new Date(o.date).getMonth() === selectedMonth).reduce((sum, o) => sum + o.totalPrice, 0);
+    const comparisonRevenue = orderHistory.filter(o => new Date(o.date).getMonth() === selectedMonth - 1).reduce((sum, o) => sum + o.totalPrice, 0);
+    const percentChange = comparisonRevenue ? ((monthlyRevenue - comparisonRevenue) / comparisonRevenue * 100).toFixed(1) : 0;
+    const popularItems = [...menuItems].sort((a,b) => (b.orders || 0) - (a.orders || 0)).slice(5);
+    const peakHours = { '12-1 PM': 15, '1-2 PM': 28, '7-8 PM': 45, '8-9 PM': 38, '9-10 PM': 22 };
     
-    // Peak hours calculation
-    const hourCounts = {};
-    orders.forEach(o => {
-      const hour = new Date(o.timestamp).getHours();
-      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-    });
-    const peakHour = Object.entries(hourCounts).sort((a,b) => b[1] - a[1])[0]?.[0] || 19;
-    
-    return {
-      totalOrdersToday: todayOrders.length,
-      activeOrders: activeOrders.length,
-      revenueToday: todayOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0),
-      peakHour: peakHour + ':00',
-      pendingRequests: serviceRequests.length
-    };
+    return { totalOrdersToday: todayOrders.length, activeOrders: activeOrders.length, revenueToday: todayOrders.reduce((sum, o) => sum + (o.totalPrice || 0), 0), peakHour: '8:00 PM', totalRevenue, monthlyRevenue, comparisonRevenue, percentChange, popularItems, peakHours, pendingRequests: serviceRequests.length };
   }
   
-  // ======================== CHART RENDERING ========================
+  function getFilteredOrders() {
+    const now = new Date();
+    let filtered = [...orderHistory];
+    if (dateFilter === 'today') filtered = filtered.filter(o => new Date(o.date).toDateString() === now.toDateString());
+    else if (dateFilter === 'week') { const weekAgo = new Date(now.setDate(now.getDate() - 7)); filtered = filtered.filter(o => new Date(o.date) >= weekAgo); }
+    else if (dateFilter === 'month') filtered = filtered.filter(o => new Date(o.date).getMonth() === selectedMonth && new Date(o.date).getFullYear() === selectedYear);
+    else if (dateFilter === 'year') filtered = filtered.filter(o => new Date(o.date).getFullYear() === selectedYear);
+    return filtered;
+  }
+  
   function renderChart() {
     const canvas = document.getElementById('salesChart');
     if (!canvas) return;
-    
     const ctx = canvas.getContext('2d');
-    const last7Days = [];
-    const salesData = [];
-    
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      last7Days.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
-      salesData.push(Math.floor(Math.random() * 5000) + 1000);
-    }
-    
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: last7Days,
-        datasets: [{
-          label: 'Sales (₹)',
-          data: salesData,
-          borderColor: '#f97316',
-          backgroundColor: 'rgba(249,115,22,0.1)',
-          fill: true,
-          tension: 0.4,
-          pointBackgroundColor: '#f97316',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'top' },
-          tooltip: { callbacks: { label: (ctx) => `₹${ctx.raw.toLocaleString()}` } }
-        },
-        scales: {
-          y: { beginAtZero: true, ticks: { callback: (value) => '₹' + value.toLocaleString() } }
-        }
-      }
-    });
+    const last7Days = [], salesData = [];
+    for (let i = 6; i >= 0; i--) { const date = new Date(); date.setDate(date.getDate() - i); last7Days.push(date.toLocaleDateString('en-US', { weekday: 'short' })); salesData.push(orderHistory.filter(o => new Date(o.date).toDateString() === date.toDateString()).reduce((s, o) => s + o.totalPrice, 0)); }
+    new Chart(ctx, { type: 'line', data: { labels: last7Days, datasets: [{ label: 'Sales (₹)', data: salesData, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => `₹${ctx.raw.toLocaleString()}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: (value) => '₹' + value.toLocaleString() } } } } });
   }
   
-  // ======================== UI HELPERS ========================
-  function showNotification(msg, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'} mr-2"></i>${msg}`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-  }
-  
+  function showNotification(msg, type = 'success') { const toast = document.createElement('div'); toast.className = 'toast-notification'; toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'} mr-2"></i>${msg}`; document.body.appendChild(toast); setTimeout(() => toast.remove(), 3000); }
   function formatCurrency(amount) { return '₹' + amount.toFixed(2); }
   function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
   
-  // ======================== AUTHENTICATION ========================
   function login(email, password) {
-    if (email === 'admin@resto.com' && password === 'admin123') {
-      currentUser = { email: email, role: 'admin' };
-      isLoggedIn = true;
-      userRole = 'admin';
-      localStorage.setItem('admin_logged', 'true');
-      addLog('ADMIN_LOGIN', { email });
-      loadData();
-      render();
-    } else if (email === 'staff@resto.com' && password === 'staff123') {
-      currentUser = { email: email, role: 'staff' };
-      isLoggedIn = true;
-      userRole = 'staff';
-      localStorage.setItem('admin_logged', 'true');
-      addLog('STAFF_LOGIN', { email });
-      loadData();
-      render();
-    } else if (email === 'kitchen@resto.com' && password === 'kitchen123') {
-      currentUser = { email: email, role: 'kitchen' };
-      isLoggedIn = true;
-      userRole = 'kitchen';
-      localStorage.setItem('admin_logged', 'true');
-      addLog('KITCHEN_LOGIN', { email });
-      loadData();
-      render();
-    } else {
-      showNotification('Invalid credentials', 'error');
-    }
+    if (email === 'admin@resto.com' && password === 'admin123') { currentUser = { email, role: 'admin' }; isLoggedIn = true; userRole = 'admin'; localStorage.setItem('admin_logged', 'true'); addLog('ADMIN_LOGIN', { email }); loadData(); render(); }
+    else if (email === 'staff@resto.com' && password === 'staff123') { currentUser = { email, role: 'staff' }; isLoggedIn = true; userRole = 'staff'; localStorage.setItem('admin_logged', 'true'); addLog('STAFF_LOGIN', { email }); loadData(); render(); }
+    else if (email === 'kitchen@resto.com' && password === 'kitchen123') { currentUser = { email, role: 'kitchen' }; isLoggedIn = true; userRole = 'kitchen'; localStorage.setItem('admin_logged', 'true'); addLog('KITCHEN_LOGIN', { email }); loadData(); render(); }
+    else showNotification('Invalid credentials', 'error');
   }
+  function logout() { currentUser = null; isLoggedIn = false; localStorage.removeItem('admin_logged'); addLog('LOGOUT', {}); render(); }
+  function loadData() { loadOrders(); loadMenu(); loadServiceRequests(); }
+  function toggleDarkMode() { darkMode = !darkMode; localStorage.setItem('darkMode', darkMode); if (darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); render(); }
+  function toggleKitchenMode() { kitchenMode = !kitchenMode; if (kitchenMode) { document.body.classList.add('kitchen-mode'); currentView = 'orders'; } else { document.body.classList.remove('kitchen-mode'); } render(); }
   
-  function logout() {
-    currentUser = null;
-    isLoggedIn = false;
-    localStorage.removeItem('admin_logged');
-    addLog('LOGOUT', {});
-    render();
-  }
-  
-  function loadData() {
-    loadOrders();
-    loadMenu();
-    loadServiceRequests();
-  }
-  
-  function toggleDarkMode() {
-    darkMode = !darkMode;
-    localStorage.setItem('darkMode', darkMode);
-    if (darkMode) document.body.classList.add('dark-mode');
-    else document.body.classList.remove('dark-mode');
-    render();
-  }
-  
-  function toggleKitchenMode() {
-    kitchenMode = !kitchenMode;
-    if (kitchenMode) {
-      document.body.classList.add('kitchen-mode');
-      currentView = 'orders';
-    } else {
-      document.body.classList.remove('kitchen-mode');
-    }
-    render();
-  }
-  
-  // ======================== RENDER FUNCTIONS ========================
   function renderLogin() {
-    return `
-      <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-          <div class="text-center mb-6">
-            <div class="inline-block bg-orange-100 rounded-full p-4 mb-4">
-              <i class="fas fa-utensils text-5xl text-orange-600"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-gray-800">QR Dine Admin</h2>
-            <p class="text-gray-500 text-sm">Restaurant Management System</p>
-          </div>
-          <div class="space-y-4">
-            <input type="email" id="loginEmail" class="w-full border rounded-lg px-4 py-2" placeholder="admin@resto.com" value="admin@resto.com">
-            <input type="password" id="loginPassword" class="w-full border rounded-lg px-4 py-2" placeholder="admin123" value="admin123">
-            <button id="loginBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700">Login</button>
-          </div>
-          <div class="mt-4 text-center text-xs text-gray-500">
-            <p>Demo Accounts:</p>
-            <p>Admin: admin@resto.com / admin123</p>
-            <p>Staff: staff@resto.com / staff123</p>
-            <p>Kitchen: kitchen@resto.com / kitchen123</p>
-          </div>
-        </div>
-      </div>
-    `;
+    return `<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100">
+      <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"><div class="text-center mb-6"><div class="inline-block bg-orange-100 rounded-full p-4 mb-4"><i class="fas fa-utensils text-5xl text-orange-600"></i></div><h2 class="text-2xl font-bold text-gray-800">QR Dine Admin</h2><p class="text-gray-500 text-sm">Restaurant Management System</p></div>
+      <div class="space-y-4"><input type="email" id="loginEmail" class="w-full border rounded-lg px-4 py-2" placeholder="admin@resto.com" value="admin@resto.com"><input type="password" id="loginPassword" class="w-full border rounded-lg px-4 py-2" placeholder="admin123" value="admin123"><button id="loginBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700">Login</button></div>
+      <div class="mt-4 text-center text-xs text-gray-500"><p>Demo Accounts:</p><p>Admin: admin@resto.com / admin123</p><p>Staff: staff@resto.com / staff123</p><p>Kitchen: kitchen@resto.com / kitchen123</p></div></div></div>`;
   }
   
   function renderSidebar() {
     const navItems = [
       { id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard', roles: ['admin', 'staff'] },
       { id: 'orders', icon: 'fa-clipboard-list', label: 'Live Orders', roles: ['admin', 'staff', 'kitchen'] },
+      { id: 'orderhistory', icon: 'fa-history', label: 'Order History', roles: ['admin', 'staff'] },
       { id: 'tables', icon: 'fa-table', label: 'Table Map', roles: ['admin', 'staff'] },
       { id: 'menu', icon: 'fa-utensils', label: 'Menu', roles: ['admin'] },
       { id: 'analytics', icon: 'fa-chart-simple', label: 'Analytics', roles: ['admin'] },
+      { id: 'comparison', icon: 'fa-chart-line', label: 'Comparison', roles: ['admin'] },
       { id: 'logs', icon: 'fa-history', label: 'Activity Logs', roles: ['admin'] }
     ];
-    
-    return `
-      <div class="fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-20">
-        <div class="p-6 border-b">
-          <div class="flex items-center gap-2">
-            <i class="fas fa-qrcode text-orange-500 text-2xl"></i>
-            <span class="font-bold text-xl text-gray-800">QR Dine</span>
-          </div>
-          <p class="text-xs text-gray-500 mt-1">Premium Admin</p>
-        </div>
-        <nav class="p-4 space-y-1">
-          ${navItems.filter(item => item.roles.includes(userRole)).map(item => `
-            <button onclick="window.dispatchEvent(new CustomEvent('navigate', { detail: '${item.id}' }))" 
-              class="sidebar-nav w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${currentView === item.id ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50'}" data-view="${item.id}">
-              <i class="fas ${item.icon} w-5"></i>
-              <span>${item.label}</span>
-            </button>
-          `).join('')}
-        </nav>
-        <div class="absolute bottom-0 left-0 right-0 p-4 border-t">
-          <div class="flex items-center justify-between mb-3">
-            <button id="darkModeToggle" class="text-gray-600 hover:text-orange-600">
-              <i class="fas ${darkMode ? 'fa-sun' : 'fa-moon'}"></i>
-            </button>
-            <button id="kitchenModeToggle" class="text-gray-600 hover:text-orange-600">
-              <i class="fas fa-utensils"></i> Kitchen Mode
-            </button>
-            <button id="logoutBtn" class="text-red-600 hover:text-red-700">
-              <i class="fas fa-sign-out-alt"></i>
-            </button>
-          </div>
-          <div class="text-xs text-gray-500 text-center">
-            <i class="fas fa-user-circle mr-1"></i> ${currentUser?.email}
-            <span class="mx-1">•</span>
-            <span class="capitalize">${userRole}</span>
-          </div>
-        </div>
-      </div>
-    `;
+    return `<div class="fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-20"><div class="p-6 border-b"><div class="flex items-center gap-2"><i class="fas fa-qrcode text-orange-500 text-2xl"></i><span class="font-bold text-xl text-gray-800">QR Dine</span></div><p class="text-xs text-gray-500 mt-1">Premium Admin</p></div>
+    <nav class="p-4 space-y-1">${navItems.filter(item => item.roles.includes(userRole)).map(item => `<button class="sidebar-nav w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${currentView === item.id ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50'}" data-view="${item.id}"><i class="fas ${item.icon} w-5"></i><span>${item.label}</span></button>`).join('')}</nav>
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t"><div class="flex items-center justify-between mb-3"><button id="darkModeToggle" class="text-gray-600 hover:text-orange-600"><i class="fas ${darkMode ? 'fa-sun' : 'fa-moon'}"></i></button><button id="kitchenModeToggle" class="text-gray-600 hover:text-orange-600"><i class="fas fa-utensils"></i> Kitchen Mode</button><button id="logoutBtn" class="text-red-600 hover:text-red-700"><i class="fas fa-sign-out-alt"></i></button></div><div class="text-xs text-gray-500 text-center"><i class="fas fa-user-circle mr-1"></i> ${currentUser?.email}<span class="mx-1">•</span><span class="capitalize">${userRole}</span></div></div></div>`;
   }
   
   function renderDashboard() {
     const stats = getStats();
-    const recentActivity = [
-      { action: 'Table 5 placed order', time: '2 min ago', type: 'order' },
-      { action: 'Order #ORD001 completed', time: '5 min ago', type: 'complete' },
-      { action: 'Table 3 requested waiter', time: '8 min ago', type: 'request' }
-    ];
-    
     setTimeout(() => renderChart(), 100);
-    
-    return `
-      <div class="p-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1>
-        <p class="text-gray-500 mb-6">Welcome back, ${currentUser?.email.split('@')[0]}</p>
-        
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-          <div class="bg-white rounded-xl shadow-sm p-5">
-            <div class="flex justify-between items-start">
-              <div><p class="text-gray-500 text-sm">Today's Orders</p><p class="text-3xl font-bold text-gray-800">${stats.totalOrdersToday}</p></div>
-              <i class="fas fa-receipt text-3xl text-orange-300"></i>
-            </div>
-          </div>
-          <div class="bg-white rounded-xl shadow-sm p-5">
-            <div class="flex justify-between items-start">
-              <div><p class="text-gray-500 text-sm">Active Orders</p><p class="text-3xl font-bold text-yellow-600">${stats.activeOrders}</p></div>
-              <i class="fas fa-clock text-3xl text-yellow-300"></i>
-            </div>
-          </div>
-          <div class="bg-white rounded-xl shadow-sm p-5">
-            <div class="flex justify-between items-start">
-              <div><p class="text-gray-500 text-sm">Today's Revenue</p><p class="text-3xl font-bold text-green-600">${formatCurrency(stats.revenueToday)}</p></div>
-              <i class="fas fa-rupee-sign text-3xl text-green-300"></i>
-            </div>
-          </div>
-          <div class="bg-white rounded-xl shadow-sm p-5">
-            <div class="flex justify-between items-start">
-              <div><p class="text-gray-500 text-sm">Service Requests</p><p class="text-3xl font-bold text-red-600">${stats.pendingRequests}</p></div>
-              <i class="fas fa-bell text-3xl text-red-300"></i>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Charts & Activity -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div class="bg-white rounded-xl shadow-sm p-5">
-            <h3 class="font-bold text-gray-800 mb-4">Sales Trend (Last 7 Days)</h3>
-            <div class="h-64"><canvas id="salesChart"></canvas></div>
-            <div class="mt-4 text-center text-sm text-gray-500">
-              <i class="fas fa-chart-line text-orange-500"></i> Peak Hour: ${stats.peakHour}
-            </div>
-          </div>
-          <div class="bg-white rounded-xl shadow-sm p-5">
-            <h3 class="font-bold text-gray-800 mb-4">Live Activity Feed</h3>
-            <div class="space-y-3 max-h-80 overflow-y-auto">
-              ${recentActivity.map(act => `
-                <div class="flex items-center gap-3 p-2 border-b">
-                  <div class="w-8 h-8 rounded-full ${act.type === 'order' ? 'bg-green-100' : act.type === 'request' ? 'bg-blue-100' : 'bg-gray-100'} flex items-center justify-center">
-                    <i class="fas ${act.type === 'order' ? 'fa-shopping-bag' : act.type === 'request' ? 'fa-bell' : 'fa-check'} text-sm ${act.type === 'order' ? 'text-green-600' : act.type === 'request' ? 'text-blue-600' : 'text-gray-600'}"></i>
-                  </div>
-                  <div class="flex-1"><p class="text-sm font-medium">${act.action}</p><p class="text-xs text-gray-400">${act.time}</p></div>
-                </div>
-              `).join('')}
-            </div>
-            <button id="addTestOrderBtn" class="mt-4 w-full bg-orange-50 text-orange-600 py-2 rounded-lg text-sm font-medium hover:bg-orange-100">+ Simulate Test Order</button>
-          </div>
-        </div>
-        
-        <!-- Service Requests Alert -->
-        ${serviceRequests.length > 0 ? `
-          <div class="bg-white rounded-xl shadow-sm p-5">
-            <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-bell text-orange-500"></i> Service Requests</h3>
-            <div class="space-y-2">
-              ${serviceRequests.map(req => `
-                <div class="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                  <div><i class="fas ${req.type === 'waiter' ? 'fa-user' : req.type === 'water' ? 'fa-tint' : 'fa-receipt'} mr-2"></i> Table ${req.tableNumber} requested ${req.type}</div>
-                  <button class="resolveReqBtn bg-green-500 text-white px-3 py-1 rounded text-sm" data-id="${req.id}">Resolve</button>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        ` : ''}
-      </div>
-    `;
+    return `<div class="p-6"><h1 class="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1><p class="text-gray-500 mb-6">Welcome back, ${currentUser?.email.split('@')[0]}</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6"><div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500 text-sm">Today's Orders</p><p class="text-3xl font-bold">${stats.totalOrdersToday}</p></div><i class="fas fa-receipt text-4xl text-orange-300"></i></div></div>
+    <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500 text-sm">Active Orders</p><p class="text-3xl font-bold text-yellow-600">${stats.activeOrders}</p></div><i class="fas fa-clock text-4xl text-yellow-300"></i></div></div>
+    <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500 text-sm">Today's Revenue</p><p class="text-3xl font-bold text-green-600">${formatCurrency(stats.revenueToday)}</p></div><i class="fas fa-rupee-sign text-4xl text-green-300"></i></div></div>
+    <div class="bg-white rounded-xl shadow-sm p-5"><div class="flex justify-between"><div><p class="text-gray-500 text-sm">Service Requests</p><p class="text-3xl font-bold text-red-600">${stats.pendingRequests}</p></div><i class="fas fa-bell text-4xl text-red-300"></i></div></div></div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"><div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Sales Trend (Last 7 Days)</h3><div class="h-64"><canvas id="salesChart"></canvas></div><div class="mt-4 text-center text-sm text-gray-500"><i class="fas fa-chart-line text-orange-500"></i> Peak Hour: ${stats.peakHour}</div></div>
+    <div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Popular Items</h3><div class="space-y-3">${stats.popularItems.map(item => `<div><div class="flex justify-between mb-1"><span>${item.name}</span><span>${item.orders || 0} orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-orange-500 h-2 rounded-full" style="width: ${((item.orders || 0) / 60) * 100}%"></div></div></div>`).join('')}</div></div></div>
+    ${serviceRequests.length > 0 ? `<div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-bell text-orange-500"></i> Service Requests</h3><div class="space-y-2">${serviceRequests.map(req => `<div class="flex items-center justify-between p-3 bg-orange-50 rounded-lg"><div><i class="fas ${req.type === 'waiter' ? 'fa-user' : 'fa-tint'} mr-2"></i> Table ${req.tableNumber} requested ${req.type}</div><button class="resolveReqBtn bg-green-500 text-white px-3 py-1 rounded text-sm" data-id="${req.id}">Resolve</button></div>`).join('')}</div></div>` : ''}
+    <button id="addTestOrderBtn" class="mt-4 w-full bg-orange-50 text-orange-600 py-3 rounded-lg font-medium hover:bg-orange-100">+ Simulate Test Order</button></div>`;
   }
   
   function renderOrders() {
-    const pendingOrders = orders.filter(o => o.status === 'Pending');
-    const preparingOrders = orders.filter(o => o.status === 'Preparing');
-    const readyOrders = orders.filter(o => o.status === 'Ready');
-    
-    const statusColors = {
-      Pending: 'bg-yellow-100 text-yellow-700',
-      Preparing: 'bg-blue-100 text-blue-700',
-      Ready: 'bg-green-100 text-green-700',
-      Served: 'bg-gray-100 text-gray-700'
-    };
-    
-    return `
-      <div class="p-6">
-        <div class="flex justify-between items-center mb-6">
-          <div><h1 class="text-2xl font-bold text-gray-800">Live Orders</h1><p class="text-gray-500">Real-time order management</p></div>
-          ${!kitchenMode ? `<button id="addTestOrderBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">+ New Test Order</button>` : ''}
-        </div>
-        
-        <!-- Order Sections -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Pending Orders -->
-          <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="bg-yellow-500 text-white p-3"><h3 class="font-bold">Pending (${pendingOrders.length})</h3></div>
-            <div class="p-3 space-y-3 max-h-96 overflow-y-auto">
-              ${pendingOrders.map(order => `
-                <div class="order-card border rounded-lg p-3 hover:shadow-md transition">
-                  <div class="flex justify-between items-start mb-2">
-                    <div><span class="font-bold text-lg">Table ${order.tableNumber}</span><p class="text-xs text-gray-500">Order #${order.id.slice(-6)}</p></div>
-                    <span class="text-xs text-gray-400">${order.elapsed || 'Just now'}</span>
-                  </div>
-                  <div class="space-y-1 mb-3">
-                    ${order.items.map(item => `<div class="flex justify-between text-sm"><span>${item.name} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}
-                  </div>
-                  <div class="flex gap-2">
-                    <button class="acceptOrderBtn bg-green-500 text-white px-3 py-1.5 rounded text-sm flex-1" data-id="${order.id}"><i class="fas fa-check mr-1"></i> Accept</button>
-                    <button class="declineOrderBtn bg-red-500 text-white px-3 py-1.5 rounded text-sm flex-1" data-id="${order.id}"><i class="fas fa-times mr-1"></i> Decline</button>
-                  </div>
-                </div>
-              `).join('')}
-              ${pendingOrders.length === 0 ? '<div class="text-center py-8 text-gray-500">No pending orders</div>' : ''}
-            </div>
-          </div>
-          
-          <!-- Preparing Orders -->
-          <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="bg-blue-500 text-white p-3"><h3 class="font-bold">Preparing (${preparingOrders.length})</h3></div>
-            <div class="p-3 space-y-3 max-h-96 overflow-y-auto">
-              ${preparingOrders.map(order => `
-                <div class="order-card border rounded-lg p-3">
-                  <div class="flex justify-between mb-2"><span class="font-bold">Table ${order.tableNumber}</span><span class="text-xs text-gray-400">${order.elapsed}</span></div>
-                  <div class="text-sm mb-3">${order.items.map(i => i.name).join(', ')}</div>
-                  <button class="readyOrderBtn bg-blue-600 text-white px-3 py-1.5 rounded text-sm w-full" data-id="${order.id}"><i class="fas fa-bell mr-1"></i> Mark Ready</button>
-                </div>
-              `).join('')}
-              ${preparingOrders.length === 0 ? '<div class="text-center py-8 text-gray-500">No orders preparing</div>' : ''}
-            </div>
-          </div>
-          
-          <!-- Ready Orders -->
-          <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="bg-green-500 text-white p-3"><h3 class="font-bold">Ready (${readyOrders.length})</h3></div>
-            <div class="p-3 space-y-3 max-h-96 overflow-y-auto">
-              ${readyOrders.map(order => `
-                <div class="order-card border rounded-lg p-3">
-                  <div class="flex justify-between mb-2"><span class="font-bold">Table ${order.tableNumber}</span><span class="text-xs text-gray-400">${order.elapsed}</span></div>
-                  <div class="text-sm mb-3">${order.items.map(i => i.name).join(', ')}</div>
-                  <button class="serveOrderBtn bg-emerald-600 text-white px-3 py-1.5 rounded text-sm w-full" data-id="${order.id}"><i class="fas fa-check-double mr-1"></i> Serve</button>
-                </div>
-              `).join('')}
-              ${readyOrders.length === 0 ? '<div class="text-center py-8 text-gray-500">No ready orders</div>' : ''}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+    const pending = orders.filter(o => o.status === 'Pending');
+    const preparing = orders.filter(o => o.status === 'Preparing');
+    const ready = orders.filter(o => o.status === 'Ready');
+    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Live Orders</h1><p class="text-gray-500">Real-time order management</p></div>${!kitchenMode ? `<button id="addTestOrderBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">+ New Test Order</button>` : ''}</div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="bg-yellow-500 text-white p-3"><h3 class="font-bold">Pending (${pending.length})</h3></div><div class="p-3 space-y-3 max-h-96 overflow-y-auto">${pending.map(order => `<div class="order-card border rounded-lg p-3"><div class="flex justify-between mb-2"><span class="font-bold text-lg">Table ${order.tableNumber}</span><span class="text-xs text-gray-400">${order.elapsed}</span></div><div class="space-y-1 mb-3">${order.items.map(item => `<div class="flex justify-between text-sm"><span>${item.name} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}</div><div class="flex gap-2"><button class="acceptOrderBtn bg-green-500 text-white px-3 py-1.5 rounded text-sm flex-1" data-id="${order.id}"><i class="fas fa-check mr-1"></i> Accept</button><button class="declineOrderBtn bg-red-500 text-white px-3 py-1.5 rounded text-sm flex-1" data-id="${order.id}"><i class="fas fa-times mr-1"></i> Decline</button><button class="printOrderBtn bg-gray-500 text-white px-3 py-1.5 rounded text-sm" data-order='${JSON.stringify(order)}'><i class="fas fa-print"></i></button></div></div>`).join('')}${pending.length === 0 ? '<div class="text-center py-8 text-gray-500">No pending orders</div>' : ''}</div></div>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="bg-blue-500 text-white p-3"><h3 class="font-bold">Preparing (${preparing.length})</h3></div><div class="p-3 space-y-3 max-h-96 overflow-y-auto">${preparing.map(order => `<div class="order-card border rounded-lg p-3"><div class="flex justify-between mb-2"><span class="font-bold">Table ${order.tableNumber}</span><span class="text-xs text-gray-400">${order.elapsed}</span></div><div class="text-sm mb-3">${order.items.map(i => i.name).join(', ')}</div><button class="readyOrderBtn bg-blue-600 text-white px-3 py-1.5 rounded text-sm w-full" data-id="${order.id}"><i class="fas fa-bell mr-1"></i> Mark Ready</button></div>`).join('')}${preparing.length === 0 ? '<div class="text-center py-8 text-gray-500">No orders preparing</div>' : ''}</div></div>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="bg-green-500 text-white p-3"><h3 class="font-bold">Ready (${ready.length})</h3></div><div class="p-3 space-y-3 max-h-96 overflow-y-auto">${ready.map(order => `<div class="order-card border rounded-lg p-3"><div class="flex justify-between mb-2"><span class="font-bold">Table ${order.tableNumber}</span><span class="text-xs text-gray-400">${order.elapsed}</span></div><div class="text-sm mb-3">${order.items.map(i => i.name).join(', ')}</div><button class="serveOrderBtn bg-emerald-600 text-white px-3 py-1.5 rounded text-sm w-full" data-id="${order.id}"><i class="fas fa-check-double mr-1"></i> Serve</button></div>`).join('')}${ready.length === 0 ? '<div class="text-center py-8 text-gray-500">No ready orders</div>' : ''}</div></div></div></div>`;
+  }
+  
+  function renderOrderHistory() {
+    const filtered = getFilteredOrders();
+    const monthlyTotal = filtered.reduce((s, o) => s + o.totalPrice, 0);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Order History</h1><p class="text-gray-500 mb-6">View and analyze order history</p>
+    <div class="bg-white rounded-xl shadow-sm p-5 mb-6"><div class="flex flex-wrap gap-4 items-center justify-between"><div class="flex gap-2"><button class="date-filter-btn px-4 py-2 rounded-lg text-sm ${dateFilter === 'today' ? 'bg-orange-600 text-white' : 'bg-gray-100'}" data-filter="today">Today</button><button class="date-filter-btn px-4 py-2 rounded-lg text-sm ${dateFilter === 'week' ? 'bg-orange-600 text-white' : 'bg-gray-100'}" data-filter="week">This Week</button><button class="date-filter-btn px-4 py-2 rounded-lg text-sm ${dateFilter === 'month' ? 'bg-orange-600 text-white' : 'bg-gray-100'}" data-filter="month">This Month</button><button class="date-filter-btn px-4 py-2 rounded-lg text-sm ${dateFilter === 'year' ? 'bg-orange-600 text-white' : 'bg-gray-100'}" data-filter="year">This Year</button></div>
+    <div class="flex gap-2"><select id="monthSelect" class="border rounded-lg px-3 py-2 text-sm"><option value="0">January</option><option value="1">February</option><option value="2">March</option><option value="3">April</option><option value="4">May</option><option value="5">June</option><option value="6">July</option><option value="7">August</option><option value="8">September</option><option value="9">October</option><option value="10">November</option><option value="11">December</option></select>
+    <select id="yearSelect" class="border rounded-lg px-3 py-2 text-sm"><option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option></select></div></div></div>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3 text-left">Date</th><th class="px-4 py-3 text-left">Order ID</th><th class="px-4 py-3 text-left">Items</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3 text-center">Action</th></tr></thead>
+    <tbody>${filtered.map(order => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-2 text-sm">${new Date(order.date).toLocaleDateString()}</td><td class="px-4 py-2 text-sm font-medium">${order.id}</td><td class="px-4 py-2 text-sm">${order.items || 3} items</td><td class="px-4 py-2 text-sm text-right font-semibold">${formatCurrency(order.totalPrice)}</td><td class="px-4 py-2 text-center"><button class="viewOrderBtn text-orange-600 text-sm" data-order='${JSON.stringify(order)}'>View Details</button></td></tr>`).join('')}</tbody></table>
+    <div class="p-4 border-t bg-gray-50"><div class="flex justify-between items-center"><span class="font-semibold">Total for selected period:</span><span class="text-2xl font-bold text-orange-600">${formatCurrency(monthlyTotal)}</span></div></div></div></div>`;
   }
   
   function renderTableMap() {
-    const tableList = getTableStatus();
-    
-    return `
-      <div class="p-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">Table Map</h1>
-        <p class="text-gray-500 mb-6">Visual table management</p>
-        
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          ${tableList.map(table => `
-            <div class="bg-white rounded-xl shadow-sm p-4 text-center cursor-pointer hover:shadow-md transition table-card" data-table="${table.id}">
-              <div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-3 ${table.status === 'occupied' ? 'bg-orange-100' : 'bg-green-100'}">
-                <i class="fas fa-chair text-2xl ${table.status === 'occupied' ? 'text-orange-600' : 'text-green-600'}"></i>
-              </div>
-              <h3 class="font-bold text-lg">Table ${table.id}</h3>
-              <p class="text-xs ${table.status === 'occupied' ? 'text-orange-600' : 'text-green-600'} font-medium">${table.status === 'occupied' ? 'Occupied' : 'Free'}</p>
-              ${table.currentOrder ? `<p class="text-xs text-gray-500 mt-1">Order #${table.currentOrder.id.slice(-6)}</p>` : ''}
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
+    const occupied = getTableStatus().filter(t => t.status === 'occupied');
+    const free = getTableStatus().filter(t => t.status === 'free');
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Table Map</h1><p class="text-gray-500 mb-6">Visual table management</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"><div class="bg-white rounded-xl p-4"><h3 class="font-bold text-red-600 mb-3"><i class="fas fa-chair mr-2"></i> Occupied Tables (${occupied.length})</h3><div class="flex flex-wrap gap-2">${occupied.map(t => `<div class="bg-red-100 text-red-700 px-3 py-2 rounded-lg font-semibold">Table ${t.id}</div>`).join('')}</div></div>
+    <div class="bg-white rounded-xl p-4"><h3 class="font-bold text-green-600 mb-3"><i class="fas fa-chair mr-2"></i> Free Tables (${free.length})</h3><div class="flex flex-wrap gap-2">${free.map(t => `<div class="bg-green-100 text-green-700 px-3 py-2 rounded-lg font-semibold">Table ${t.id}</div>`).join('')}</div></div></div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">${getTableStatus().map(table => `<div class="bg-white rounded-xl shadow-sm p-4 text-center cursor-pointer hover:shadow-md transition" data-table="${table.id}"><div class="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-3 ${table.status === 'occupied' ? 'bg-orange-100' : 'bg-green-100'}"><i class="fas fa-chair text-2xl ${table.status === 'occupied' ? 'text-orange-600' : 'text-green-600'}"></i></div><h3 class="font-bold text-lg">Table ${table.id}</h3><p class="text-xs ${table.status === 'occupied' ? 'text-orange-600' : 'text-green-600'} font-medium">${table.status === 'occupied' ? 'Occupied' : 'Free'}</p>${table.currentOrder ? `<p class="text-xs text-gray-500 mt-1">Order #${table.currentOrder.id.slice(-6)}</p>` : ''}</div>`).join('')}</div></div>`;
   }
   
   function renderMenuManagement() {
     const stats = getStats();
-    
-    return `
-      <div class="p-6">
-        <div class="flex justify-between items-center mb-6">
-          <div><h1 class="text-2xl font-bold text-gray-800">Menu Management</h1><p class="text-gray-500">${stats.availableItems} items available</p></div>
-          <button id="addMenuItemBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Item</button>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          ${menuItems.map(item => `
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div class="p-4 border-b flex justify-between items-center">
-                <div class="flex items-center gap-2"><span class="text-2xl">${item.image || '🍽️'}</span><h3 class="font-bold">${escapeHtml(item.name)}</h3></div>
-                <span class="text-orange-600 font-bold">${formatCurrency(item.price)}</span>
-              </div>
-              <div class="p-4">
-                <p class="text-sm text-gray-500 mb-2">${item.category}</p>
-                <div class="flex items-center gap-3 mb-3">
-                  <span class="text-xs ${item.veg ? 'text-green-600' : 'text-red-600'}"><i class="fas ${item.veg ? 'fa-leaf' : 'fa-drumstick'}"></i> ${item.veg ? 'Veg' : 'Non-Veg'}</span>
-                  <span class="text-xs text-gray-500"><i class="far fa-clock"></i> ${item.prepTime} min</span>
-                  <span class="text-xs ${item.available ? 'text-green-600' : 'text-red-600'}">${item.available ? 'In Stock' : 'Out of Stock'}</span>
-                </div>
-                <div class="flex gap-2">
-                  <button class="editMenuItemBtn flex-1 bg-gray-100 text-gray-700 py-2 rounded text-sm" data-id="${item.id}">Edit</button>
-                  <button class="toggleAvailBtn flex-1 ${item.available ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'} py-2 rounded text-sm" data-id="${item.id}" data-available="${item.available}">${item.available ? 'Block' : 'Unblock'}</button>
-                  <button class="deleteMenuItemBtn bg-red-100 text-red-600 px-3 py-2 rounded text-sm" data-id="${item.id}" data-name="${escapeHtml(item.name)}"><i class="fas fa-trash"></i></button>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
+    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Menu Management</h1><p class="text-gray-500">${menuItems.length} items total</p></div><button id="addMenuItemBtn" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Item</button></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${menuItems.map(item => `<div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="p-4 border-b flex justify-between items-center"><div class="flex items-center gap-2"><span class="text-2xl">${item.image || '🍽️'}</span><h3 class="font-bold">${escapeHtml(item.name)}</h3></div><span class="text-orange-600 font-bold">${formatCurrency(item.price)}</span></div><div class="p-4"><p class="text-sm text-gray-500 mb-2">${item.category}</p><div class="flex items-center gap-3 mb-3"><span class="text-xs ${item.veg ? 'text-green-600' : 'text-red-600'}"><i class="fas ${item.veg ? 'fa-leaf' : 'fa-drumstick'}"></i> ${item.veg ? 'Veg' : 'Non-Veg'}</span><span class="text-xs text-gray-500"><i class="far fa-clock"></i> ${item.prepTime} min</span><span class="text-xs ${item.available ? 'text-green-600' : 'text-red-600'}">${item.available ? 'In Stock' : 'Out of Stock'}</span></div><div class="flex gap-2"><button class="editMenuItemBtn flex-1 bg-gray-100 text-gray-700 py-2 rounded text-sm" data-id="${item.id}">Edit</button><button class="toggleAvailBtn flex-1 ${item.available ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'} py-2 rounded text-sm" data-id="${item.id}" data-available="${item.available}">${item.available ? 'Block' : 'Unblock'}</button><button class="deleteMenuItemBtn bg-red-100 text-red-600 px-3 py-2 rounded text-sm" data-id="${item.id}" data-name="${escapeHtml(item.name)}"><i class="fas fa-trash"></i></button></div></div></div>`).join('')}</div></div>`;
   }
   
   function renderAnalytics() {
-    return `
-      <div class="p-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">Analytics</h1>
-        <p class="text-gray-500 mb-6">Sales insights and performance metrics</p>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="bg-white rounded-xl shadow-sm p-5">
-            <h3 class="font-bold mb-4">Most Ordered Items</h3>
-            <div class="space-y-3">
-              <div><div class="flex justify-between mb-1"><span>Paneer Tikka</span><span>45 orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-orange-500 h-2 rounded-full" style="width: 75%"></div></div></div>
-              <div><div class="flex justify-between mb-1"><span>Chicken Biryani</span><span>38 orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-orange-500 h-2 rounded-full" style="width: 63%"></div></div></div>
-              <div><div class="flex justify-between mb-1"><span>Butter Naan</span><span>30 orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-orange-500 h-2 rounded-full" style="width: 50%"></div></div></div>
-            </div>
-          </div>
-          
-          <div class="bg-white rounded-xl shadow-sm p-5">
-            <h3 class="font-bold mb-4">Peak Hours Analysis</h3>
-            <div class="space-y-3">
-              <div><div class="flex justify-between mb-1"><span>7 PM - 8 PM</span><span>32 orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-purple-500 h-2 rounded-full" style="width: 100%"></div></div></div>
-              <div><div class="flex justify-between mb-1"><span>8 PM - 9 PM</span><span>28 orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-purple-500 h-2 rounded-full" style="width: 87%"></div></div></div>
-              <div><div class="flex justify-between mb-1"><span>1 PM - 2 PM</span><span>20 orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-purple-500 h-2 rounded-full" style="width: 62%"></div></div></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+    const stats = getStats();
+    const monthlyData = [12000, 15000, 18000, 22000, 25000, 28000, 32000, 35000, 38000, 42000, 45000, 48000];
+    setTimeout(() => {
+      const ctx = document.getElementById('monthlyChart')?.getContext('2d');
+      if (ctx) new Chart(ctx, { type: 'bar', data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], datasets: [{ label: 'Monthly Revenue (₹)', data: monthlyData, backgroundColor: '#f97316', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => `₹${ctx.raw.toLocaleString()}` } } } } });
+    }, 100);
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Analytics</h1><p class="text-gray-500 mb-6">Sales insights and performance metrics</p>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"><div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Monthly Performance (${new Date().getFullYear()})</h3><div class="h-80"><canvas id="monthlyChart"></canvas></div></div>
+    <div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Top Performing Items</h3><div class="space-y-4">${stats.popularItems.map((item, i) => `<div><div class="flex justify-between mb-1"><span>${i+1}. ${item.name}</span><span class="font-semibold">${item.orders || 0} orders</span></div><div class="w-full bg-gray-200 rounded-full h-3"><div class="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full" style="width: ${((item.orders || 0) / 60) * 100}%"></div></div></div>`).join('')}</div></div></div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6"><div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Peak Hours Analysis</h3>${Object.entries(stats.peakHours).map(([hour, count]) => `<div><div class="flex justify-between mb-1"><span>${hour}</span><span>${count} orders</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-purple-500 h-2 rounded-full" style="width: ${(count / 45) * 100}%"></div></div></div>`).join('')}</div>
+    <div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Revenue Insights</h3><div class="space-y-4"><div class="flex justify-between items-center p-3 bg-green-50 rounded-lg"><div><p class="text-sm text-gray-600">Total Revenue (Year)</p><p class="text-2xl font-bold text-green-600">${formatCurrency(stats.totalRevenue)}</p></div><i class="fas fa-chart-line text-3xl text-green-400"></i></div>
+    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg"><div><p class="text-sm text-gray-600">Average Order Value</p><p class="text-2xl font-bold text-blue-600">${formatCurrency(stats.totalRevenue / (orders.length || 1))}</p></div><i class="fas fa-chart-simple text-3xl text-blue-400"></i></div></div></div></div></div>`;
+  }
+  
+  function renderComparison() {
+    const stats = getStats();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentYearData = [12000, 15000, 18000, 22000, 25000, 28000, 32000, 35000, 38000, 42000, 45000, 48000];
+    const lastYearData = [10000, 13000, 15000, 18000, 20000, 23000, 25000, 28000, 30000, 33000, 35000, 38000];
+    setTimeout(() => {
+      const ctx = document.getElementById('comparisonChart')?.getContext('2d');
+      if (ctx) new Chart(ctx, { type: 'line', data: { labels: months, datasets: [{ label: 'This Year', data: currentYearData, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.4 }, { label: 'Last Year', data: lastYearData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ₹${ctx.raw.toLocaleString()}` } } } } });
+    }, 100);
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Year-over-Year Comparison</h1><p class="text-gray-500 mb-6">Compare performance across periods</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6"><div class="bg-white rounded-xl shadow-sm p-5 text-center"><p class="text-gray-500">This Month vs Last Month</p><p class="text-3xl font-bold ${stats.percentChange >= 0 ? 'text-green-600' : 'text-red-600'}">${stats.percentChange >= 0 ? '+' : ''}${stats.percentChange}%</p><p class="text-sm text-gray-500 mt-1">${formatCurrency(stats.monthlyRevenue)} vs ${formatCurrency(stats.comparisonRevenue)}</p></div>
+    <div class="bg-white rounded-xl shadow-sm p-5 text-center"><p class="text-gray-500">Best Performing Month</p><p class="text-3xl font-bold text-green-600">December</p><p class="text-sm text-gray-500 mt-1">${formatCurrency(48000)} revenue</p></div>
+    <div class="bg-white rounded-xl shadow-sm p-5 text-center"><p class="text-gray-500">Growth Rate</p><p class="text-3xl font-bold text-blue-600">+26%</p><p class="text-sm text-gray-500 mt-1">Year over year</p></div></div>
+    <div class="bg-white rounded-xl shadow-sm p-5"><h3 class="font-bold mb-4">Revenue Comparison (This Year vs Last Year)</h3><div class="h-96"><canvas id="comparisonChart"></canvas></div></div></div>`;
   }
   
   function renderLogs() {
-    return `
-      <div class="p-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">Activity Logs</h1>
-        <p class="text-gray-500 mb-6">System activity tracking</p>
-        
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-50 border-b">
-                <tr><th class="px-4 py-3 text-left text-sm font-medium">Timestamp</th><th class="px-4 py-3 text-left text-sm font-medium">Action</th><th class="px-4 py-3 text-left text-sm font-medium">Details</th><th class="px-4 py-3 text-left text-sm font-medium">User</th></tr>
-              </thead>
-              <tbody>
-                ${activityLogs.slice(0, 50).map(log => `
-                  <tr class="border-b hover:bg-gray-50">
-                    <td class="px-4 py-2 text-sm">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td class="px-4 py-2 text-sm font-medium">${log.action}</td>
-                    <td class="px-4 py-2 text-sm text-gray-600">${typeof log.details === 'object' ? JSON.stringify(log.details) : log.details}</td>
-                    <td class="px-4 py-2 text-sm">${log.user}</td>
-                  </tr>
-                `).join('')}
-                ${activityLogs.length === 0 ? '<tr><td colspan="4" class="text-center py-8 text-gray-500">No logs yet</td></tr>' : ''}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    `;
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Activity Logs</h1><p class="text-gray-500 mb-6">System activity tracking</p>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3 text-left text-sm">Timestamp</th><th class="px-4 py-3 text-left text-sm">Action</th><th class="px-4 py-3 text-left text-sm">Details</th><th class="px-4 py-3 text-left text-sm">User</th></tr></thead>
+    <tbody>${activityLogs.slice(0, 50).map(log => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-2 text-sm">${new Date(log.timestamp).toLocaleString()}</td><td class="px-4 py-2 text-sm font-medium">${log.action}</td><td class="px-4 py-2 text-sm text-gray-600">${typeof log.details === 'object' ? JSON.stringify(log.details) : log.details}</td><td class="px-4 py-2 text-sm">${log.user}</td></tr>`).join('')}</tbody></table>${activityLogs.length === 0 ? '<div class="text-center py-8 text-gray-500">No logs yet</div>' : ''}</div></div></div>`;
   }
   
   function renderMainContent() {
     switch(currentView) {
       case 'dashboard': return renderDashboard();
       case 'orders': return renderOrders();
+      case 'orderhistory': return renderOrderHistory();
       case 'tables': return renderTableMap();
       case 'menu': return renderMenuManagement();
       case 'analytics': return renderAnalytics();
+      case 'comparison': return renderComparison();
       case 'logs': return renderLogs();
       default: return renderDashboard();
     }
@@ -842,87 +355,31 @@
   function render() {
     const root = document.getElementById('admin-dashboard');
     if (!root) return;
+    if (!isLoggedIn) { root.innerHTML = renderLogin(); document.getElementById('loginBtn')?.addEventListener('click', () => { const email = document.getElementById('loginEmail')?.value; const pwd = document.getElementById('loginPassword')?.value; login(email, pwd); }); return; }
+    if (darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
+    if (kitchenMode) document.body.classList.add('kitchen-mode'); else document.body.classList.remove('kitchen-mode');
+    root.innerHTML = `<div class="min-h-screen bg-gray-50">${renderSidebar()}<div class="ml-64">${renderMainContent()}</div></div>`;
     
-    if (!isLoggedIn) {
-      root.innerHTML = renderLogin();
-      document.getElementById('loginBtn')?.addEventListener('click', () => {
-        const email = document.getElementById('loginEmail')?.value;
-        const pwd = document.getElementById('loginPassword')?.value;
-        login(email, pwd);
-      });
-      return;
-    }
-    
-    if (darkMode) document.body.classList.add('dark-mode');
-    else document.body.classList.remove('dark-mode');
-    
-    if (kitchenMode) document.body.classList.add('kitchen-mode');
-    else document.body.classList.remove('kitchen-mode');
-    
-    root.innerHTML = `
-      <div class="min-h-screen bg-gray-50">
-        ${renderSidebar()}
-        <div class="ml-64">${renderMainContent()}</div>
-      </div>
-    `;
-    
-    // Attach events
-    document.querySelectorAll('.sidebar-nav').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentView = btn.dataset.view;
-        render();
-      });
-    });
-    
+    document.querySelectorAll('.sidebar-nav').forEach(btn => { btn.addEventListener('click', () => { currentView = btn.dataset.view; render(); }); });
     document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
     document.getElementById('kitchenModeToggle')?.addEventListener('click', toggleKitchenMode);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
     
-    document.querySelectorAll('.acceptOrderBtn').forEach(btn => {
-      btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Preparing'));
-    });
-    document.querySelectorAll('.declineOrderBtn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (confirm('Decline this order?')) updateOrderStatus(btn.dataset.id, 'Declined');
-      });
-    });
-    document.querySelectorAll('.readyOrderBtn').forEach(btn => {
-      btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Ready'));
-    });
-    document.querySelectorAll('.serveOrderBtn').forEach(btn => {
-      btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Served'));
-    });
-    
-    document.querySelectorAll('.resolveReqBtn').forEach(btn => {
-      btn.addEventListener('click', () => resolveServiceRequest(parseInt(btn.dataset.id)));
-    });
-    
+    document.querySelectorAll('.acceptOrderBtn').forEach(btn => { btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Preparing')); });
+    document.querySelectorAll('.declineOrderBtn').forEach(btn => { btn.addEventListener('click', () => { if (confirm('Decline this order?')) updateOrderStatus(btn.dataset.id, 'Declined'); }); });
+    document.querySelectorAll('.readyOrderBtn').forEach(btn => { btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Ready')); });
+    document.querySelectorAll('.serveOrderBtn').forEach(btn => { btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Served')); });
+    document.querySelectorAll('.resolveReqBtn').forEach(btn => { btn.addEventListener('click', () => resolveServiceRequest(parseInt(btn.dataset.id))); });
+    document.querySelectorAll('.printOrderBtn').forEach(btn => { btn.addEventListener('click', () => printBill(JSON.parse(btn.dataset.order))); });
+    document.querySelectorAll('.date-filter-btn').forEach(btn => { btn.addEventListener('click', () => { dateFilter = btn.dataset.filter; render(); }); });
     document.getElementById('addTestOrderBtn')?.addEventListener('click', addTestOrder);
-    document.getElementById('addMenuItemBtn')?.addEventListener('click', () => {
-      const name = prompt('Item name:');
-      const price = parseFloat(prompt('Price:'));
-      if (name && price) addMenuItem({ name, price, category: 'Starters', veg: true, available: true, prepTime: 10, image: '🍽️' });
-    });
-    
-    document.querySelectorAll('.editMenuItemBtn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const item = menuItems.find(i => i.id == btn.dataset.id);
-        const newPrice = prompt('New price:', item.price);
-        if (newPrice) updateMenuItem(item.id, { price: parseFloat(newPrice) });
-      });
-    });
-    document.querySelectorAll('.toggleAvailBtn').forEach(btn => {
-      btn.addEventListener('click', () => toggleAvailability(btn.dataset.id, btn.dataset.available === 'true'));
-    });
-    document.querySelectorAll('.deleteMenuItemBtn').forEach(btn => {
-      btn.addEventListener('click', () => deleteMenuItem(btn.dataset.id, btn.dataset.name));
-    });
+    document.getElementById('addMenuItemBtn')?.addEventListener('click', () => { const name = prompt('Item name:'); const price = parseFloat(prompt('Price:')); if (name && price) addMenuItem({ name, price, category: 'Starters', veg: true, available: true, prepTime: 10, image: '🍽️' }); });
+    document.querySelectorAll('.editMenuItemBtn').forEach(btn => { btn.addEventListener('click', () => { const item = menuItems.find(i => i.id == btn.dataset.id); const newPrice = prompt('New price:', item.price); if (newPrice) updateMenuItem(item.id, { price: parseFloat(newPrice) }); }); });
+    document.querySelectorAll('.toggleAvailBtn').forEach(btn => { btn.addEventListener('click', () => toggleAvailability(btn.dataset.id, btn.dataset.available === 'true')); });
+    document.querySelectorAll('.deleteMenuItemBtn').forEach(btn => { btn.addEventListener('click', () => deleteMenuItem(btn.dataset.id, btn.dataset.name)); });
   }
   
-  // Initialize
-  loadLogs();
-  addLog('APP_STARTED', { version: '2.0' });
-  render();
+  loadLogs(); addLog('APP_STARTED', { version: '3.0' }); render();
 </script>
 </body>
 </html>
