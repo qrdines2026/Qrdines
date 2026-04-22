@@ -3,59 +3,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>QR Dine | Owner Portal - Complete Restaurant Management</title>
+  <title>QR Dine | Owner Dashboard - Complete Restaurant Management</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'Inter', sans-serif; }
-    body { background: #f1f5f9; }
+    body { background: #f1f5f9; overflow-x: hidden; }
     
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
     
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-    
-    .toast-notification {
-      position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white;
-      padding: 12px 20px; border-radius: 12px; z-index: 1000;
-      animation: slideIn 0.3s ease-out; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-    }
-    
-    .stat-card {
-      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-      transition: all 0.3s ease;
-    }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    .toast-notification { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 12px; z-index: 1000; animation: slideIn 0.3s ease-out; }
+    .stat-card { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); transition: all 0.3s ease; }
     .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-    
-    .dark-mode { background: #0f172a; color: #f1f5f9; }
-    .dark-mode .bg-white { background: #1e293b; }
-    .dark-mode .bg-gray-50 { background: #0f172a; }
-    .dark-mode .text-gray-600 { color: #94a3b8; }
-    .dark-mode .border-gray-200 { border-color: #334155; }
-    .dark-mode .stat-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
-    
     .badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
     .badge-completed { background: #dcfce7; color: #166534; }
     .badge-pending { background: #fef3c7; color: #92400e; }
     .badge-preparing { background: #dbeafe; color: #1e40af; }
-    
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; border-radius: 20px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; padding: 24px; }
-    .dark-mode .modal-content { background: #1e293b; }
-    
-    .sidebar-nav { transition: all 0.2s ease; cursor: pointer; }
+    .sidebar-nav { transition: all 0.2s ease; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; margin-bottom: 4px; }
     .sidebar-nav:hover { background: #fef3c7; color: #f97316; }
-    .sidebar-nav.active { background: linear-gradient(135deg, #f97316, #ea580c); color: white; box-shadow: 0 4px 12px rgba(249,115,22,0.3); }
-    
+    .sidebar-nav.active { background: linear-gradient(135deg, #f97316, #ea580c); color: white; }
     .veg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     .veg-dot.green { background: #22c55e; }
     .veg-dot.red { background: #ef4444; }
+    .upload-area { border: 2px dashed #cbd5e1; border-radius: 12px; transition: all 0.2s; cursor: pointer; }
+    .upload-area:hover { border-color: #f97316; background: #fef3c7; }
+    .image-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 12px; border: 2px solid #f97316; margin-top: 10px; }
+    
+    .sidebar-container {
+      position: fixed;
+      left: 0;
+      top: 0;
+      height: 100vh;
+      width: 260px;
+      background: white;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-nav-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid #e5e7eb;
+      background: white;
+    }
+    .main-content {
+      margin-left: 260px;
+      min-height: 100vh;
+    }
+    .dark-mode .sidebar-container { background: #1e293b; }
+    .dark-mode .sidebar-footer { border-color: #334155; background: #1e293b; }
+    .dark-mode .bg-white { background: #1e293b; }
+    .dark-mode .bg-gray-50 { background: #0f172a; }
+    .dark-mode .text-gray-600 { color: #94a3b8; }
+    .dark-mode .stat-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
   </style>
 </head>
 <body>
@@ -107,11 +119,15 @@
   let isLoggedIn = false;
   let currentView = 'dashboard';
   let darkMode = localStorage.getItem('ownerDarkMode') === 'true';
-  let activityLogs = [];
   let showStaffModal = false;
   let showInventoryModal = false;
+  let showMenuItemModal = false;
   let editingStaff = null;
   let editingInventory = null;
+  let editingMenuItem = null;
+  let selectedImageFile = null;
+  let imagePreviewUrl = null;
+  let activityLogs = [];
   
   // Firebase Data
   let menuItems = [];
@@ -119,31 +135,25 @@
   let staffMembers = [];
   let expenses = [];
   let inventory = [];
-  let reviews = [];
-  let orderHistory = [];
   let restaurantData = null;
   
   // Restaurant Settings
   let restaurantSettings = {
-    name: 'Spice Garden',
-    logo: '',
-    address: '123 Food Street, MG Road, Bangalore - 560001',
-    phone: '+91 98765 43210',
-    email: 'contact@spicegarden.com',
-    gstin: '32ABCDE1234F1Z5',
-    fssai: '12345678901234',
-    kitchenNote: 'No onion no garlic for Jain orders'
+    name: 'My Restaurant',
+    address: '',
+    phone: '',
+    email: '',
+    gstin: '',
+    kitchenNote: ''
   };
   
-  // Tax Configuration
   let taxConfig = {
-    cgst: { rate: 2.5, enabled: true, name: 'CGST' },
-    sgst: { rate: 2.5, enabled: true, name: 'SGST' },
-    serviceCharge: { rate: 5, enabled: true, name: 'Service Charge' },
+    cgst: { rate: 2.5, enabled: true },
+    sgst: { rate: 2.5, enabled: true },
+    serviceCharge: { rate: 5, enabled: true },
     roundOff: true
   };
   
-  // Financial Data
   let revenueData = { monthly: [] };
   let expenseBreakdown = { Ingredients: 35, 'Staff Salary': 30, Rent: 15, Utilities: 10, Marketing: 6, Maintenance: 4 };
   
@@ -158,7 +168,45 @@
   let unsubscribeStaff = null;
   let unsubscribeInventory = null;
   let unsubscribeExpenses = null;
-  let unsubscribeReviews = null;
+  let unsubscribeLogs = null;
+  
+  const categories = ['Starters', 'Main Course', 'Breads', 'Beverages', 'Desserts'];
+  
+  // ======================== HELPER FUNCTIONS ========================
+  function showNotification(msg, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'} mr-2"></i>${msg}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+  
+  function formatCurrency(amount) { return '₹' + amount.toLocaleString(); }
+  function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+  
+  function compressImage(file) {
+    return new Promise((resolve) => {
+      if (!file) { resolve(null); return; }
+      const reader = new FileReader();
+      reader.onload = (e) => { resolve(e.target.result); };
+      reader.readAsDataURL(file);
+    });
+  }
+  
+  async function addLog(action, details) {
+    if (!currentUser) return;
+    try {
+      await addDoc(collection(db, "activityLogs"), {
+        restaurantId: currentUser.uid,
+        action,
+        details,
+        timestamp: serverTimestamp(),
+        user: currentUser.email
+      });
+    } catch (error) { console.error("Error logging:", error); }
+    activityLogs.unshift({ id: Date.now(), timestamp: new Date().toLocaleString(), action, details, user: currentUser.email });
+    if (activityLogs.length > 100) activityLogs.pop();
+  }
   
   // ======================== FIREBASE LISTENERS ========================
   function listenToMenu() {
@@ -167,11 +215,7 @@
     if (unsubscribeMenu) unsubscribeMenu();
     unsubscribeMenu = onSnapshot(menuQuery, (snapshot) => {
       menuItems = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        menuItems.push({ id: doc.id, ...data });
-      });
-      console.log(`✅ Menu loaded: ${menuItems.length} items`);
+      snapshot.forEach((doc) => { menuItems.push({ id: doc.id, ...doc.data() }); });
       if (currentView === 'menu') render();
     });
   }
@@ -182,14 +226,9 @@
     if (unsubscribeOrders) unsubscribeOrders();
     unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
       orders = [];
-      orderHistory = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        orders.push({ id: doc.id, ...data });
-        orderHistory.push({ id: doc.id, ...data });
-      });
-      console.log(`✅ Orders loaded: ${orders.length} orders`);
-      if (currentView === 'dashboard' || currentView === 'orderhistory') render();
+      snapshot.forEach((doc) => { orders.push({ id: doc.id, ...doc.data() }); });
+      console.log(`✅ Orders loaded: ${orders.length} orders for restaurant ${currentUser.uid}`);
+      if (currentView === 'dashboard' || currentView === 'orders' || currentView === 'orderhistory') render();
     });
   }
   
@@ -226,79 +265,98 @@
     });
   }
   
-  function listenToReviews() {
+  function listenToLogs() {
     if (!currentUser) return;
-    const reviewQuery = query(collection(db, "reviews"), where("restaurantId", "==", currentUser.uid));
-    if (unsubscribeReviews) unsubscribeReviews();
-    unsubscribeReviews = onSnapshot(reviewQuery, (snapshot) => {
-      reviews = [];
-      snapshot.forEach((doc) => { reviews.push({ id: doc.id, ...doc.data() }); });
-      if (currentView === 'reviews') render();
+    const logQuery = query(collection(db, "activityLogs"), where("restaurantId", "==", currentUser.uid), orderBy("timestamp", "desc"));
+    if (unsubscribeLogs) unsubscribeLogs();
+    unsubscribeLogs = onSnapshot(logQuery, (snapshot) => {
+      activityLogs = [];
+      snapshot.forEach((doc) => { 
+        const data = doc.data();
+        activityLogs.push({ id: doc.id, ...data, timestamp: data.timestamp?.toDate?.()?.toLocaleString() || new Date().toLocaleString() });
+      });
+      if (currentView === 'logs') render();
     });
   }
   
-  // ======================== FIREBASE CRUD OPERATIONS ========================
-  async function addLog(action, details) {
-    if (!currentUser) return;
+  // ======================== MENU CRUD ========================
+  async function addMenuItem(itemData, file) {
     try {
-      await addDoc(collection(db, "activityLogs"), {
+      let imageUrl = 'https://placehold.co/80x80/F97316/white?text=Food';
+      if (file) imageUrl = await compressImage(file);
+      await addDoc(collection(db, "menu"), {
         restaurantId: currentUser.uid,
-        action,
-        details,
-        timestamp: serverTimestamp(),
-        user: currentUser.email
+        name: itemData.name,
+        price: parseFloat(itemData.price),
+        category: itemData.category,
+        description: itemData.description || '',
+        image: imageUrl,
+        veg: itemData.veg,
+        available: true,
+        createdAt: serverTimestamp()
       });
-    } catch (error) { console.error("Error logging:", error); }
-    activityLogs.unshift({ id: Date.now(), timestamp: new Date().toLocaleString(), action, details, user: currentUser.email });
-    if (activityLogs.length > 100) activityLogs.pop();
+      addLog('ADD_MENU_ITEM', `Added ${itemData.name}`);
+      showNotification(`✅ "${itemData.name}" added!`);
+      return true;
+    } catch (error) { showNotification("Error: " + error.message, 'error'); return false; }
   }
   
-  // Menu Functions with Firebase
-  async function toggleMenuItem(id, currentStatus) {
+  async function updateMenuItem(id, updates, file) {
+    try {
+      let updateData = {
+        name: updates.name,
+        price: parseFloat(updates.price),
+        category: updates.category,
+        description: updates.description || '',
+        veg: updates.veg,
+        updatedAt: serverTimestamp()
+      };
+      if (file) updateData.image = await compressImage(file);
+      await updateDoc(doc(db, "menu", id), updateData);
+      addLog('UPDATE_MENU_ITEM', `Updated ${updates.name}`);
+      showNotification(`✅ "${updates.name}" updated!`);
+      return true;
+    } catch (error) { showNotification("Error: " + error.message, 'error'); return false; }
+  }
+  
+  async function deleteMenuItem(id, name) {
+    if (!confirm(`⚠️ Delete "${name}" permanently?`)) return;
+    try {
+      await deleteDoc(doc(db, "menu", id));
+      addLog('DELETE_MENU_ITEM', `Deleted ${name}`);
+      showNotification(`✅ "${name}" deleted!`);
+    } catch (error) { showNotification("Error deleting", 'error'); }
+  }
+  
+  async function toggleMenuItemAvailability(id, currentStatus, name) {
     try {
       await updateDoc(doc(db, "menu", id), { available: !currentStatus });
-      addLog('TOGGLE_MENU', `Item ${!currentStatus ? 'available' : 'unavailable'}`);
-      showNotification(`Item updated successfully`, 'success');
-    } catch (error) {
-      showNotification("Error updating item", 'error');
-    }
+      addLog('TOGGLE_MENU', `${name} ${!currentStatus ? 'available' : 'unavailable'}`);
+      showNotification(`${name} ${!currentStatus ? 'available' : 'unavailable'}`);
+    } catch (error) { showNotification("Error updating status", 'error'); }
   }
   
-  async function updateMenuPrice(id, name, currentPrice) {
-    const newPrice = prompt(`Update price for ${name}:`, currentPrice);
-    if (newPrice && !isNaN(parseFloat(newPrice))) {
-      try {
-        await updateDoc(doc(db, "menu", id), { price: parseFloat(newPrice) });
-        addLog('UPDATE_MENU', `${name} price updated`);
-        showNotification('Price updated successfully', 'success');
-      } catch (error) {
-        showNotification("Error updating price", 'error');
-      }
-    }
-  }
-  
-  // Staff Functions with Firebase
+  // ======================== STAFF CRUD ========================
   async function openStaffModal(staff = null) { editingStaff = staff; showStaffModal = true; render(); }
   async function saveStaff() {
     const name = document.getElementById('staffName')?.value;
     const role = document.getElementById('staffRole')?.value;
-    const category = document.getElementById('staffCategory')?.value;
     const salary = parseFloat(document.getElementById('staffSalary')?.value);
     const phone = document.getElementById('staffPhone')?.value;
-    if (!name || !role || !salary) { showNotification('Please fill all required fields', 'error'); return; }
+    if (!name || !role || !salary) { showNotification('Please fill all fields', 'error'); return; }
     try {
       if (editingStaff) {
-        await updateDoc(doc(db, "staff", editingStaff.id), { name, role, category, salary, phone });
+        await updateDoc(doc(db, "staff", editingStaff.id), { name, role, salary, phone });
         addLog('EDIT_STAFF', `Updated ${name}`);
         showNotification('Staff updated');
       } else {
         await addDoc(collection(db, "staff"), {
           restaurantId: currentUser.uid,
-          name, role, category, salary, phone,
+          name, role, salary, phone,
           joinDate: new Date().toISOString(),
           createdAt: serverTimestamp()
         });
-        addLog('ADD_STAFF', `Added ${name} as ${role}`);
+        addLog('ADD_STAFF', `Added ${name}`);
         showNotification(`Staff ${name} added`);
       }
     } catch (error) { showNotification("Error saving staff", 'error'); }
@@ -314,7 +372,7 @@
     } catch (error) { showNotification("Error deleting staff", 'error'); }
   }
   
-  // Inventory Functions with Firebase
+  // ======================== INVENTORY CRUD ========================
   async function openInventoryModal(item = null) { editingInventory = item; showInventoryModal = true; render(); }
   async function saveInventory() {
     const name = document.getElementById('invName')?.value;
@@ -322,20 +380,19 @@
     const unit = document.getElementById('invUnit')?.value;
     const threshold = parseFloat(document.getElementById('invThreshold')?.value);
     const price = parseFloat(document.getElementById('invPrice')?.value);
-    const category = document.getElementById('invCategory')?.value;
-    if (!name || isNaN(quantity) || !unit) { showNotification('Please fill all required fields', 'error'); return; }
+    if (!name || isNaN(quantity) || !unit) { showNotification('Please fill all fields', 'error'); return; }
     try {
       if (editingInventory) {
-        await updateDoc(doc(db, "inventory", editingInventory.id), { name, quantity, unit, threshold, price, category });
+        await updateDoc(doc(db, "inventory", editingInventory.id), { name, quantity, unit, threshold, price });
         addLog('EDIT_INVENTORY', `Updated ${name}`);
         showNotification('Inventory updated');
       } else {
         await addDoc(collection(db, "inventory"), {
           restaurantId: currentUser.uid,
-          name, quantity, unit, threshold, price, category,
+          name, quantity, unit, threshold, price,
           createdAt: serverTimestamp()
         });
-        addLog('ADD_INVENTORY', `Added ${name} to inventory`);
+        addLog('ADD_INVENTORY', `Added ${name}`);
         showNotification(`Item ${name} added`);
       }
     } catch (error) { showNotification("Error saving inventory", 'error'); }
@@ -362,15 +419,15 @@
     }
   }
   
-  // Expense Functions with Firebase
+  // ======================== EXPENSE CRUD ========================
   async function addExpense() {
     const category = prompt('Category:'); if(!category) return;
-    const amount = prompt('Amount:'); if(!amount) return;
+    const amount = parseFloat(prompt('Amount:')); if(!amount) return;
     const description = prompt('Description:'); if(!description) return;
     try {
       await addDoc(collection(db, "expenses"), {
         restaurantId: currentUser.uid,
-        category, amount: parseInt(amount), description,
+        category, amount, description,
         date: new Date().toISOString(),
         createdAt: serverTimestamp()
       });
@@ -389,25 +446,39 @@
     } catch (error) { showNotification("Error deleting expense", 'error'); }
   }
   
-  // Review Functions with Firebase
-  async function addReviewResponse(reviewId) {
-    const review = reviews.find(r => r.id == reviewId);
-    const response = prompt('Add response:', review?.response || '');
-    if (response !== null && review) {
-      try {
-        await updateDoc(doc(db, "reviews", reviewId), { response });
-        addLog('REVIEW_RESPONSE', `Replied to ${review.customer}`);
-        showNotification('Response added');
-        render();
-      } catch (error) { showNotification("Error adding response", 'error'); }
-    }
+  // ======================== ORDER ACTIONS ========================
+  async function updateOrderStatus(orderId, newStatus) {
+    try {
+      await updateDoc(doc(db, "orders", orderId), { status: newStatus });
+      showNotification(`Order status updated to ${newStatus}`, 'success');
+      render();
+    } catch (error) { showNotification("Error updating order", 'error'); }
   }
   
-  // Settings Functions
+  function printBill(order) {
+    const printWindow = window.open('', '_blank');
+    const orderDate = new Date(order.timestamp).toLocaleString();
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html><head><title>Bill #${order.billNumber}</title>
+      <style>body{font-family:monospace;padding:20px;max-width:400px;margin:0 auto;}</style>
+      </head><body>
+      <div style="text-align:center;"><h2>${restaurantSettings.name || 'QR Dine'}</h2><hr></div>
+      <div><p><strong>Bill No:</strong> ${order.billNumber || '0001'}</p><p><strong>Table:</strong> ${order.tableNumber}</p><p><strong>Date:</strong> ${orderDate}</p></div>
+      <table style="width:100%;">${order.items?.map(item => `<td><td style="padding:4px;">${item.name} x${item.quantity}</td><td style="text-align:right;">${formatCurrency(item.price * item.quantity)}</td></tr>`).join('')}</table>
+      <hr><div style="text-align:right;"><strong>Total: ${formatCurrency(order.totalPrice)}</strong></div>
+      <div style="text-align:center; margin-top:20px;"><p>Thank you! Visit Again</p></div>
+      <script>window.print();setTimeout(window.close,1000);<\/script>
+      </body></html>
+    `);
+    printWindow.document.close();
+  }
+  
+  // ======================== SETTINGS ========================
   async function saveSettings() {
-    if (!restaurantData?.id) return;
     try {
-      await updateDoc(doc(db, "restaurants", restaurantData.id), {
+      await setDoc(doc(db, "restaurants", currentUser.uid), {
+        userId: currentUser.uid,
         name: document.getElementById('restoName')?.value,
         address: document.getElementById('restoAddress')?.value,
         phone: document.getElementById('restoPhone')?.value,
@@ -415,8 +486,8 @@
         gstin: document.getElementById('restoGST')?.value,
         kitchenNote: document.getElementById('kitchenNote')?.value,
         updatedAt: serverTimestamp()
-      });
-      restaurantSettings.name = document.getElementById('restoName')?.value || restaurantSettings.name;
+      }, { merge: true });
+      restaurantSettings.name = document.getElementById('restoName')?.value;
       restaurantSettings.address = document.getElementById('restoAddress')?.value;
       restaurantSettings.phone = document.getElementById('restoPhone')?.value;
       restaurantSettings.email = document.getElementById('restoEmail')?.value;
@@ -428,9 +499,7 @@
       taxConfig.roundOff = document.getElementById('roundOffEnabled')?.checked;
       addLog('SETTINGS_UPDATED', 'Settings saved');
       showNotification('Settings saved successfully');
-    } catch (error) {
-      showNotification("Error saving settings", 'error');
-    }
+    } catch (error) { showNotification("Error saving settings", 'error'); }
   }
   
   // ======================== AUTHENTICATION ========================
@@ -441,36 +510,28 @@
       isLoggedIn = true;
       localStorage.setItem('owner_logged', 'true');
       
-      // Load restaurant data
-      const q = query(collection(db, "restaurants"), where("userId", "==", currentUser.uid));
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        restaurantData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-        restaurantSettings.name = restaurantData.name || restaurantSettings.name;
-        restaurantSettings.address = restaurantData.address || restaurantSettings.address;
-        restaurantSettings.phone = restaurantData.phone || restaurantSettings.phone;
-        restaurantSettings.email = restaurantData.email || restaurantSettings.email;
-        restaurantSettings.gstin = restaurantData.gstin || restaurantSettings.gstin;
+      const restoDoc = await getDoc(doc(db, "restaurants", currentUser.uid));
+      if (restoDoc.exists()) {
+        const data = restoDoc.data();
+        restaurantSettings.name = data.name || 'My Restaurant';
+        restaurantSettings.address = data.address || '';
+        restaurantSettings.phone = data.phone || '';
       }
       
       addLog('OWNER_LOGIN', 'Logged in');
-      // Initialize listeners
       listenToMenu();
       listenToOrders();
       listenToStaff();
       listenToInventory();
       listenToExpenses();
-      listenToReviews();
+      listenToLogs();
       
-      // Generate sample revenue data
       for (let i = 1; i <= 12; i++) {
         revenueData.monthly.push({ month: i, amount: Math.floor(Math.random() * 150000) + 50000 });
       }
       
       render();
-    } catch (error) {
-      showNotification('Invalid credentials. Please register first.', 'error');
-    }
+    } catch (error) { showNotification('Login failed: ' + error.message, 'error'); }
   }
   
   async function register(email, password, name, restoName, address, phone) {
@@ -492,19 +553,20 @@
       isLoggedIn = true;
       localStorage.setItem('owner_logged', 'true');
       restaurantSettings.name = restoName;
-      restaurantSettings.address = address;
-      restaurantSettings.phone = phone;
       
-      addLog('OWNER_REGISTER', `Registered restaurant: ${restoName}`);
-      showNotification(`Welcome ${name}! Your restaurant "${restoName}" is ready.`, 'success');
+      addLog('OWNER_REGISTER', `Registered: ${restoName}`);
+      showNotification(`Welcome ${name}!`, 'success');
       
-      // Initialize listeners
       listenToMenu();
       listenToOrders();
       listenToStaff();
       listenToInventory();
       listenToExpenses();
-      listenToReviews();
+      listenToLogs();
+      
+      for (let i = 1; i <= 12; i++) {
+        revenueData.monthly.push({ month: i, amount: Math.floor(Math.random() * 150000) + 50000 });
+      }
       
       render();
     } catch (error) { showNotification(error.message, 'error'); }
@@ -521,8 +583,6 @@
   function toggleDarkMode() { 
     darkMode = !darkMode; 
     localStorage.setItem('ownerDarkMode', darkMode); 
-    if (darkMode) document.body.classList.add('dark-mode'); 
-    else document.body.classList.remove('dark-mode'); 
     render(); 
   }
   
@@ -531,74 +591,45 @@
       if (user) {
         currentUser = user;
         isLoggedIn = true;
-        
-        const q = query(collection(db, "restaurants"), where("userId", "==", currentUser.uid));
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-          restaurantData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-          restaurantSettings.name = restaurantData.name || restaurantSettings.name;
-          restaurantSettings.address = restaurantData.address || restaurantSettings.address;
-          restaurantSettings.phone = restaurantData.phone || restaurantSettings.phone;
-        }
-        
         listenToMenu();
         listenToOrders();
         listenToStaff();
         listenToInventory();
         listenToExpenses();
-        listenToReviews();
-        
+        listenToLogs();
         for (let i = 1; i <= 12; i++) {
           revenueData.monthly.push({ month: i, amount: Math.floor(Math.random() * 150000) + 50000 });
         }
-        
         render();
-      } else {
-        isLoggedIn = false;
-        render();
-      }
+      } else { isLoggedIn = false; render(); }
     });
   }
   
-  // ======================== STATISTICS FUNCTIONS ========================
+  // ======================== STATISTICS ========================
+  function getStats() {
+    const totalOrders = orders.length;
+    const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const availableItems = menuItems.filter(i => i.available).length;
+    const lowStockItems = inventory.filter(i => i.quantity <= i.threshold);
+    const bestSeller = menuItems.sort((a,b) => (b.orders || 0) - (a.orders || 0))[0];
+    return { totalOrders, pendingOrders, totalRevenue, availableItems, lowStockItems, bestSeller };
+  }
+  
   function getFinancialStats() {
     const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const totalProfit = totalRevenue - totalExpenses;
-    const profitMargin = totalRevenue ? (totalProfit / totalRevenue * 100).toFixed(1) : 0;
-    const monthlyRevenue = revenueData.monthly[new Date().getMonth()]?.amount || 0;
-    const lastMonthRevenue = revenueData.monthly[new Date().getMonth() - 1]?.amount || 0;
-    const revenueGrowth = lastMonthRevenue ? ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue * 100).toFixed(1) : 0;
-    return { totalRevenue, totalExpenses, totalProfit, profitMargin, monthlyRevenue, revenueGrowth };
+    const profitMargin = totalRevenue ? ((totalRevenue - totalExpenses) / totalRevenue * 100).toFixed(1) : 0;
+    return { totalRevenue, totalExpenses, profitMargin };
   }
-  
-  function getBusinessStats() {
-    const totalOrders = orders.length + orderHistory.length;
-    const avgOrderValue = totalOrders ? (orders.reduce((s, o) => s + (o.totalPrice || 0), 0) / (orders.length || 1)) : 0;
-    const avgRating = reviews.length ? reviews.reduce((s, r) => s + (r.rating || 4), 0) / reviews.length : 4.5;
-    const popularItems = [...menuItems].sort((a,b) => (b.orders || 0) - (a.orders || 0)).slice(3);
-    const lowStockItems = inventory.filter(i => i.quantity <= i.threshold);
-    const bestSeller = menuItems.sort((a,b) => (b.orders || 0) - (a.orders || 0))[0];
-    return { totalOrders, avgOrderValue, avgRating, popularItems, lowStockItems, bestSeller };
-  }
-  
-  function showNotification(msg, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'} mr-2"></i>${msg}`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-  }
-  
-  function formatCurrency(amount) { return '₹' + amount.toLocaleString(); }
   
   // ======================== RENDER FUNCTIONS ========================
   function renderLogin() {
-    return `<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100">
+    return `<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100 p-4">
       <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-        <div class="text-center mb-6"><div class="inline-block bg-orange-100 rounded-full p-4 mb-4"><i class="fas fa-crown text-5xl text-orange-600"></i></div><h2 class="text-2xl font-bold text-gray-800">Owner Portal</h2><p class="text-gray-500 text-sm">Complete Restaurant Management</p></div>
-        <div id="loginForm"><div class="space-y-4"><input type="email" id="loginEmail" class="w-full border rounded-lg px-4 py-2" placeholder="Email"><input type="password" id="loginPassword" class="w-full border rounded-lg px-4 py-2" placeholder="Password"><button id="loginBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700">Login</button><p class="text-center text-sm">New owner? <button id="showRegisterBtn" class="text-orange-600">Register</button></p></div></div>
-        <div id="registerForm" class="hidden"><div class="space-y-4"><input type="text" id="regName" class="w-full border rounded-lg px-4 py-2" placeholder="Owner Name"><input type="text" id="regRestoName" class="w-full border rounded-lg px-4 py-2" placeholder="Restaurant Name"><input type="email" id="regEmail" class="w-full border rounded-lg px-4 py-2" placeholder="Email"><input type="password" id="regPassword" class="w-full border rounded-lg px-4 py-2" placeholder="Password"><input type="text" id="regAddress" class="w-full border rounded-lg px-4 py-2" placeholder="Address"><input type="tel" id="regPhone" class="w-full border rounded-lg px-4 py-2" placeholder="Phone"><button id="registerBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold">Register Restaurant</button><p class="text-center text-sm">Already have account? <button id="showLoginBtn" class="text-orange-600">Login</button></p></div></div>
+        <div class="text-center mb-6"><div class="inline-block bg-orange-100 rounded-full p-4 mb-4"><i class="fas fa-crown text-5xl text-orange-600"></i></div><h2 class="text-2xl font-bold">Owner Portal</h2><p class="text-gray-500 text-sm">Restaurant Management</p></div>
+        <div id="loginForm"><div class="space-y-4"><input type="email" id="loginEmail" class="w-full border rounded-lg px-4 py-2" placeholder="Email"><input type="password" id="loginPassword" class="w-full border rounded-lg px-4 py-2" placeholder="Password"><button id="loginBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold">Login</button><p class="text-center text-sm">New owner? <button id="showRegisterBtn" class="text-orange-600">Register</button></p></div></div>
+        <div id="registerForm" class="hidden"><div class="space-y-4"><input type="text" id="regName" class="w-full border rounded-lg px-4 py-2" placeholder="Owner Name"><input type="text" id="regRestoName" class="w-full border rounded-lg px-4 py-2" placeholder="Restaurant Name"><input type="email" id="regEmail" class="w-full border rounded-lg px-4 py-2" placeholder="Email"><input type="password" id="regPassword" class="w-full border rounded-lg px-4 py-2" placeholder="Password"><input type="text" id="regAddress" class="w-full border rounded-lg px-4 py-2" placeholder="Address"><input type="tel" id="regPhone" class="w-full border rounded-lg px-4 py-2" placeholder="Phone"><button id="registerBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold">Register</button><p class="text-center text-sm"><button id="showLoginBtn" class="text-orange-600">Back to Login</button></p></div></div>
       </div>
     </div>`;
   }
@@ -606,107 +637,105 @@
   function renderSidebar() {
     const navItems = [
       { id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
+      { id: 'orders', icon: 'fa-clipboard-list', label: 'Orders' },
       { id: 'menu', icon: 'fa-utensils', label: 'Menu' },
       { id: 'orderhistory', icon: 'fa-history', label: 'Order History' },
-      { id: 'analytics', icon: 'fa-chart-simple', label: 'Analytics' },
-      { id: 'financial', icon: 'fa-rupee-sign', label: 'Financial' },
       { id: 'staff', icon: 'fa-users', label: 'Staff' },
       { id: 'inventory', icon: 'fa-boxes', label: 'Inventory' },
-      { id: 'reviews', icon: 'fa-star', label: 'Reviews' },
       { id: 'expenses', icon: 'fa-money-bill-wave', label: 'Expenses' },
       { id: 'logs', icon: 'fa-history', label: 'Logs' },
       { id: 'settings', icon: 'fa-cog', label: 'Settings' }
     ];
-    return `<div class="fixed left-0 top-0 h-full w-64 bg-white shadow-xl z-20"><div class="p-6 border-b"><div class="flex items-center gap-2"><i class="fas fa-crown text-orange-500 text-2xl"></i><span class="font-bold text-xl text-gray-800">QR Dine</span></div><p class="text-xs text-gray-500 mt-1">Owner Portal</p></div>
-    <nav class="p-4 space-y-1">${navItems.map(item => `<div class="sidebar-nav w-full px-4 py-3 rounded-lg flex items-center gap-3 transition ${currentView === item.id ? 'active' : 'text-gray-600 hover:bg-gray-50'}" data-view="${item.id}"><i class="fas ${item.icon} w-5"></i><span>${item.label}</span></div>`).join('')}</nav>
-    <div class="absolute bottom-0 left-0 right-0 p-4 border-t"><div class="flex items-center justify-between mb-3"><button id="darkModeToggle" class="text-gray-600 hover:text-orange-600"><i class="fas ${darkMode ? 'fa-sun' : 'fa-moon'}"></i></button><button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</button></div><div class="text-xs text-gray-500 text-center mt-2"><i class="fas fa-user-circle mr-1"></i> ${currentUser?.email}</div></div></div>`;
+    return `
+      <div class="sidebar-container">
+        <div class="p-5 border-b"><div class="flex items-center gap-2"><i class="fas fa-crown text-orange-500 text-2xl"></i><span class="font-bold text-xl">QR Dine</span></div><p class="text-xs text-gray-500 mt-1">Owner Portal</p></div>
+        <div class="sidebar-nav-container">${navItems.map(item => `<div class="sidebar-nav ${currentView === item.id ? 'active' : ''}" data-view="${item.id}"><i class="fas ${item.icon} w-5"></i><span>${item.label}</span></div>`).join('')}</div>
+        <div class="sidebar-footer"><div class="flex items-center justify-between"><button id="darkModeToggle" class="text-gray-600 hover:text-orange-600"><i class="fas ${darkMode ? 'fa-sun' : 'fa-moon'} text-lg"></i></button><button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm">Logout</button></div><div class="text-xs text-gray-500 text-center mt-2 truncate">${currentUser?.email}</div></div>
+      </div>
+    `;
+  }
+  
+  function renderTopBar() {
+    return `<div class="bg-white shadow-sm px-6 py-4 flex justify-between items-center sticky top-0 z-10"><div><h1 class="text-xl font-bold">${restaurantSettings.name || 'Restaurant'} Dashboard</h1></div><div class="text-right"><p class="text-sm">${new Date().toLocaleTimeString()}</p></div></div>`;
   }
   
   function renderDashboard() {
-    const business = getBusinessStats();
+    const stats = getStats();
     const financial = getFinancialStats();
     setTimeout(() => {
-      // Revenue Chart
-      const revenueCanvas = document.getElementById('revenueChart');
-      if (revenueCanvas) {
-        if (revenueChartInstance) revenueChartInstance.destroy();
-        const ctx = revenueCanvas.getContext('2d');
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const revenue = revenueData.monthly.map(m => m.amount);
-        revenueChartInstance = new Chart(ctx, {
-          type: 'line',
-          data: { labels: months, datasets: [{ label: 'Monthly Revenue (₹)', data: revenue, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.4 }] },
-          options: { responsive: true, maintainAspectRatio: false }
-        });
+      const revCtx = document.getElementById('revenueChart');
+      if (revCtx && revenueChartInstance) revenueChartInstance.destroy();
+      if (revCtx) {
+        revenueChartInstance = new Chart(revCtx, { type: 'line', data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], datasets: [{ label: 'Revenue', data: revenueData.monthly.map(m => m.amount), borderColor: '#f97316', fill: true }] }, options: { responsive: true } });
       }
-      // Expense Chart
-      const expenseCanvas = document.getElementById('expenseChart');
-      if (expenseCanvas) {
-        if (expenseChartInstance) expenseChartInstance.destroy();
-        const ctx = expenseCanvas.getContext('2d');
-        const labels = Object.keys(expenseBreakdown);
-        const data = Object.values(expenseBreakdown);
-        expenseChartInstance = new Chart(ctx, {
-          type: 'pie',
-          data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4'] }] },
-          options: { responsive: true, maintainAspectRatio: false }
-        });
+      const expCtx = document.getElementById('expenseChart');
+      if (expCtx && expenseChartInstance) expenseChartInstance.destroy();
+      if (expCtx) {
+        expenseChartInstance = new Chart(expCtx, { type: 'pie', data: { labels: Object.keys(expenseBreakdown), datasets: [{ data: Object.values(expenseBreakdown), backgroundColor: ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4'] }] }, options: { responsive: true } });
       }
     }, 100);
-    return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold text-gray-800">Welcome back, Owner!</h1><p class="text-gray-500">Complete business overview</p></div>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
-      <div class="stat-card bg-white rounded-xl p-5"><div><p class="text-gray-500 text-sm">Total Revenue</p><p class="text-3xl font-bold text-green-600">${formatCurrency(financial.totalRevenue)}</p><p class="text-xs text-green-500">↑ ${financial.revenueGrowth}% vs last month</p></div></div>
-      <div class="stat-card bg-white rounded-xl p-5"><div><p class="text-gray-500 text-sm">Total Orders</p><p class="text-3xl font-bold text-blue-600">${business.totalOrders}</p></div></div>
-      <div class="stat-card bg-white rounded-xl p-5"><div><p class="text-gray-500 text-sm">Profit Margin</p><p class="text-3xl font-bold text-purple-600">${financial.profitMargin}%</p></div></div>
-      <div class="stat-card bg-white rounded-xl p-5"><div><p class="text-gray-500 text-sm">Avg Order Value</p><p class="text-3xl font-bold text-orange-600">${formatCurrency(business.avgOrderValue)}</p></div></div>
-    </div>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">Revenue Trend</h3><div class="h-72"><canvas id="revenueChart"></canvas></div></div>
-      <div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">Expense Breakdown</h3><div class="h-72"><canvas id="expenseChart"></canvas></div></div>
-    </div>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">⚠️ Low Stock Alerts</h3>${business.lowStockItems.length ? business.lowStockItems.map(i => `<div class="flex justify-between py-2 border-b"><span>${i.name}</span><span class="text-red-600 font-bold">${i.quantity} ${i.unit} left</span><button onclick="window.updateInventoryQuantity(${i.id}, ${i.quantity}, '${i.name}')" class="text-orange-500 text-sm">Update</button></div>`).join('') : '<p class="text-gray-500">All stock levels are healthy!</p>'}</div>
-      <div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">💡 Smart Insights</h3><div class="space-y-3"><div class="flex items-center gap-3 p-3 bg-orange-50 rounded-lg"><i class="fas fa-chart-line text-orange-500"></i><div><p class="font-medium">Peak Hour: 8:00 PM - 10:00 PM</p><p class="text-xs">65% of orders during dinner</p></div></div><div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg"><i class="fas fa-fire text-blue-500"></i><div><p class="font-medium">Best Seller: ${business.bestSeller?.name || 'N/A'}</p><p class="text-xs">Top selling item</p></div></div></div></div>
-    </div></div>`;
+    return `<div class="p-6"><div class="grid grid-cols-4 gap-5 mb-6"><div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500">Total Orders</p><p class="text-2xl font-bold">${stats.totalOrders}</p></div><div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500">Pending</p><p class="text-2xl font-bold text-yellow-600">${stats.pendingOrders}</p></div><div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500">Revenue</p><p class="text-2xl font-bold text-green-600">${formatCurrency(financial.totalRevenue)}</p></div><div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500">Menu Items</p><p class="text-2xl font-bold">${stats.availableItems}</p></div></div>
+    <div class="grid grid-cols-2 gap-6 mb-6"><div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">Revenue Trend</h3><canvas id="revenueChart" height="200"></canvas></div><div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">Expense Breakdown</h3><canvas id="expenseChart" height="200"></canvas></div></div>
+    <div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">⚠️ Low Stock Alerts</h3>${stats.lowStockItems.length ? stats.lowStockItems.map(i => `<div class="flex justify-between py-2 border-b"><span>${i.name}</span><span class="text-red-600">${i.quantity} left</span><button onclick="window.updateInventoryQuantity('${i.id}', ${i.quantity}, '${i.name}')" class="text-orange-500 text-sm">Update</button></div>`).join('') : '<p class="text-gray-500">All stock levels are healthy!</p>'}</div></div>`;
   }
   
-  function renderMenu() { return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold">Menu Management</h1><p class="text-gray-500">Manage items, prices, and availability</p></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[800px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3 text-left">Item</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Price</th><th class="px-4 py-3 text-right">Profit</th><th class="px-4 py-3 text-right">Orders</th><th class="px-4 py-3 text-center">Status</th><th class="px-4 py-3 text-center">Action</th></tr></thead><tbody>${menuItems.map(item => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${item.name} ${item.veg ? '🥬' : '🍗'}<div class="text-xs text-gray-400">${item.description || ''}</div></td><td class="px-4 py-3">${item.category}</td><td class="px-4 py-3 text-right font-semibold">${formatCurrency(item.price)}</td><td class="px-4 py-3 text-right text-green-600">${formatCurrency((item.price * 0.6) || 0)}</td><td class="px-4 py-3 text-right font-bold">${item.orders || 0}</td><td class="px-4 py-3 text-center"><button onclick="window.toggleMenuItem('${item.id}', ${item.available})" class="px-2 py-1 rounded text-xs ${item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${item.available ? 'Available' : 'Out'}</button></td><td class="px-4 py-3 text-center"><button onclick="window.updateMenuPrice('${item.id}', '${item.name}', ${item.price})" class="text-blue-500 hover:text-blue-700"><i class="fas fa-edit"></i> Edit</button></td></tr>`).join('')}</tbody>}</div></div>`; }
+  function renderOrders() {
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-4">Live Orders (${orders.length})</h1><div class="space-y-4">${orders.length === 0 ? '<div class="bg-white rounded-xl p-12 text-center"><i class="fas fa-inbox text-5xl text-gray-300"></i><p class="mt-3">No orders yet</p><p class="text-sm text-gray-400">Orders will appear when customers place them</p></div>' : orders.map(order => `<div class="bg-white rounded-xl shadow-sm p-5 border-l-4 ${order.status === 'Pending' ? 'border-yellow-400' : 'border-green-400'}"><div class="flex justify-between flex-wrap gap-3"><div><h3 class="font-bold text-lg">Bill #${order.billNumber || 'N/A'}</h3><p class="text-sm text-gray-500">Table ${order.tableNumber} • ${new Date(order.timestamp).toLocaleString()}</p></div><div class="text-right"><p class="text-xl font-bold text-orange-600">${formatCurrency(order.totalPrice)}</p><span class="px-2 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}">${order.status}</span></div></div><div class="border-t pt-3 mt-2">${order.items?.map(item => `<div class="flex justify-between text-sm py-1"><span><span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>${item.name} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}</div><div class="flex gap-2 mt-4">${order.status === 'Pending' ? `<button class="acceptOrderBtn bg-green-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Accept Order</button><button class="declineOrderBtn bg-red-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Decline</button>` : ''}${order.status === 'Accepted' ? `<button class="prepareOrderBtn bg-purple-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Start Preparing</button>` : ''}${order.status === 'Preparing' ? `<button class="readyOrderBtn bg-blue-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Mark Ready</button>` : ''}${order.status === 'Ready' ? `<button class="serveOrderBtn bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Serve Order</button>` : ''}<button class="printOrderBtn bg-gray-500 text-white px-4 py-2 rounded-lg text-sm" data-order='${JSON.stringify(order)}'><i class="fas fa-print"></i> Print Bill</button></div></div>`).join('')}</div></div>`;
+  }
   
-  function renderOrderHistory() { const allOrders = [...orderHistory, ...orders].sort((a,b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date)); return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Order History</h1><p class="text-gray-500 mb-6">Complete record of all customer orders</p><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[800px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Order ID</th><th class="px-4 py-3">Customer</th><th class="px-4 py-3 text-center">Table</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Payment</th><th class="px-4 py-3">Date</th></tr></thead><tbody>${allOrders.slice(0, 50).map(o => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-mono text-sm">${o.id?.slice(-8) || 'N/A'}</td><td class="px-4 py-3">${o.customerName || 'Walk-in'}</td><td class="px-4 py-3 text-center">${o.tableNumber || '-'}</td><td class="px-4 py-3 text-right font-semibold">${formatCurrency(o.totalPrice)}</td><td class="px-4 py-3"><span class="badge ${o.status === 'Completed' ? 'badge-completed' : o.status === 'Preparing' ? 'badge-preparing' : 'badge-pending'}">${o.status}</span></td><td class="px-4 py-3">${o.paymentMethod || '-'}</td><td class="px-4 py-3 text-sm">${new Date(o.timestamp || o.date).toLocaleDateString()}</td></tr>`).join('')}</tbody>}</div></div>`; }
+  function renderMenuManagement() {
+    return `<div class="p-6"><div class="flex justify-between mb-6"><h1 class="text-2xl font-bold">Menu Management</h1><button onclick="window.openMenuItemModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Item</button></div><div class="bg-white rounded-xl overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="p-3">Image</th><th class="p-3">Name</th><th class="p-3">Category</th><th class="p-3 text-right">Price</th><th class="p-3">Type</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Actions</th></tr></thead><tbody>${menuItems.map(item => `<tr class="border-b"><td class="p-3"><img src="${item.image}" class="w-10 h-10 rounded object-cover"></td><td class="p-3 font-medium"><span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>${item.name}</td><td class="p-3">${item.category}</td><td class="p-3 text-right font-semibold">${formatCurrency(item.price)}</td><td class="p-3">${item.veg ? 'Veg' : 'Non-Veg'}</td><td class="p-3 text-center"><button onclick="window.toggleMenuItem('${item.id}', ${item.available}, '${item.name}')" class="px-2 py-1 rounded text-xs ${item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${item.available ? 'Available' : 'Out'}</button></td><td class="p-3 text-center"><button onclick="window.editMenuItem('${item.id}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteMenuItem('${item.id}', '${item.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
+  }
   
-  function renderAnalytics() { setTimeout(() => { const canvas = document.getElementById('categorySalesChart'); if (canvas && !categoryChartInstance) { const ctx = canvas.getContext('2d'); const categories = ['Starters', 'Main Course', 'Breads', 'Beverages', 'Desserts']; const sales = categories.map(cat => menuItems.filter(i => i.category === cat).reduce((s, i) => s + (i.orders || 0), 0)); categoryChartInstance = new Chart(ctx, { type: 'bar', data: { labels: categories, datasets: [{ label: 'Orders', data: sales, backgroundColor: '#f97316', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: false } }); } }, 100); return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Analytics Dashboard</h1><p class="text-gray-500 mb-6">Deep insights into your business performance</p><div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6"><div class="bg-white rounded-xl p-6 text-center"><p class="text-gray-500">Conversion Rate</p><p class="text-3xl font-bold text-green-600">68%</p><p class="text-xs text-gray-400">+5% vs last month</p></div><div class="bg-white rounded-xl p-6 text-center"><p class="text-gray-500">Customer Retention</p><p class="text-3xl font-bold text-blue-600">45%</p></div><div class="bg-white rounded-xl p-6 text-center"><p class="text-gray-500">Avg Customer Rating</p><p class="text-3xl font-bold text-yellow-600">${getBusinessStats().avgRating.toFixed(1)} ★</p></div></div><div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">Sales by Category</h3><div class="h-80"><canvas id="categorySalesChart"></canvas></div></div></div>`; }
+  function renderOrderHistory() {
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-4">Order History</h1><div class="bg-white rounded-xl overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="p-3">Bill No</th><th class="p-3">Table</th><th class="p-3 text-right">Amount</th><th class="p-3">Status</th><th class="p-3">Date</th><th class="p-3">Action</th></tr></thead><tbody>${orders.slice(0, 50).map(o => `<tr class="border-b"><td class="p-3 font-mono">#${o.billNumber}</td><td class="p-3">${o.tableNumber}</td><td class="p-3 text-right font-semibold">${formatCurrency(o.totalPrice)}</td><td class="p-3"><span class="badge ${o.status === 'Completed' ? 'badge-completed' : 'badge-pending'}">${o.status}</span></td><td class="p-3 text-sm">${new Date(o.timestamp).toLocaleDateString()}</td><td class="p-3"><button class="printOrderBtn text-blue-500" data-order='${JSON.stringify(o)}'><i class="fas fa-print"></i> Print</button></td></tr>`).join('')}</tbody>}</div></div>`;
+  }
   
-  function renderFinancial() { const f = getFinancialStats(); const totalExpenses = expenses.reduce((s,e)=>s+e.amount,0); return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Financial Management</h1><p class="text-gray-500 mb-6">Track revenue, expenses, and tax details</p><div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6"><div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-5 text-white"><p class="text-sm">Total Revenue</p><p class="text-2xl font-bold">${formatCurrency(f.totalRevenue)}</p></div><div class="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-5 text-white"><p class="text-sm">Total Expenses</p><p class="text-2xl font-bold">${formatCurrency(totalExpenses)}</p></div><div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5 text-white"><p class="text-sm">Net Profit</p><p class="text-2xl font-bold">${formatCurrency(f.totalProfit)}</p></div><div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-5 text-white"><p class="text-sm">Profit Margin</p><p class="text-2xl font-bold">${f.profitMargin}%</p></div></div><div class="bg-white rounded-xl p-5 mb-6"><h3 class="font-bold mb-4">💰 Tax & Charges Breakdown</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-4"><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">CGST</p><p class="text-xl font-bold">${taxConfig.cgst.enabled ? taxConfig.cgst.rate + '%' : 'Disabled'}</p></div><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">SGST</p><p class="text-xl font-bold">${taxConfig.sgst.enabled ? taxConfig.sgst.rate + '%' : 'Disabled'}</p></div><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">Service Charge</p><p class="text-xl font-bold">${taxConfig.serviceCharge.enabled ? taxConfig.serviceCharge.rate + '%' : 'Disabled'}</p></div><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">Round Off</p><p class="text-xl font-bold">${taxConfig.roundOff ? 'Enabled' : 'Disabled'}</p></div></div></div><div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">📊 Expenditure Breakdown</h3><div class="space-y-3">${Object.entries(expenseBreakdown).map(([cat, percent]) => `<div><div class="flex justify-between mb-1"><span>${cat}</span><span>${percent}%</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: ${percent}%"></div></div></div>`).join('')}</div><div class="mt-4 pt-3 border-t"><p class="text-sm text-gray-500">Total Expenditure YTD: <span class="font-bold text-red-600">${formatCurrency(totalExpenses)}</span></p></div></div></div>`; }
+  function renderStaff() {
+    return `<div class="p-6"><div class="flex justify-between mb-6"><h1 class="text-2xl font-bold">Staff Management</h1><button onclick="window.openStaffModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Staff</button></div><div class="bg-white rounded-xl overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="p-3">Name</th><th class="p-3">Role</th><th class="p-3 text-right">Salary</th><th class="p-3">Phone</th><th class="p-3 text-center">Action</th></tr></thead><tbody>${staffMembers.map(s => `<tr class="border-b"><td class="p-3 font-medium">${s.name}</td><td class="p-3">${s.role}</td><td class="p-3 text-right">${formatCurrency(s.salary)}</td><td class="p-3">${s.phone}</td><td class="p-3 text-center"><button onclick="window.openStaffModal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteStaff('${s.id}', '${s.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
+  }
   
-  function renderStaff() { return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Staff Management</h1><p class="text-gray-500">Manage your team members</p></div><button onclick="window.openStaffModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Staff</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[700px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Role</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Salary</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3 text-center">Action</th></tr></thead><tbody>${staffMembers.map(s => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${s.name}</td><td class="px-4 py-3">${s.role}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs bg-gray-100">${s.category || 'General'}</span></td><td class="px-4 py-3 text-right">${formatCurrency(s.salary)}</td><td class="px-4 py-3">${s.phone}</td><td class="px-4 py-3 text-center"><button onclick="window.openStaffModal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteStaff('${s.id}', '${s.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`; }
+  function renderInventory() {
+    return `<div class="p-6"><div class="flex justify-between mb-6"><h1 class="text-2xl font-bold">Inventory Management</h1><button onclick="window.openInventoryModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Item</button></div><div class="bg-white rounded-xl overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="p-3">Item</th><th class="p-3 text-right">Quantity</th><th class="p-3">Unit</th><th class="p-3 text-right">Threshold</th><th class="p-3 text-right">Price</th><th class="p-3 text-center">Action</th></tr></thead><tbody>${inventory.map(i => `<tr class="border-b"><td class="p-3 font-medium">${i.name}</td><td class="p-3 text-right ${i.quantity <= i.threshold ? 'text-red-600 font-bold' : ''}">${i.quantity}</td><td class="p-3">${i.unit}</td><td class="p-3 text-right">${i.threshold}</td><td class="p-3 text-right">${formatCurrency(i.price)}</td><td class="p-3 text-center"><button onclick="window.openInventoryModal(${JSON.stringify(i).replace(/"/g, '&quot;')})" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteInventory('${i.id}', '${i.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
+  }
   
-  function renderInventory() { return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Inventory Management</h1><p class="text-gray-500">Track stock levels and supplies</p></div><button onclick="window.openInventoryModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Item</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[700px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Item</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Quantity</th><th class="px-4 py-3">Unit</th><th class="px-4 py-3 text-right">Threshold</th><th class="px-4 py-3 text-right">Price/Unit</th><th class="px-4 py-3 text-center">Action</th></tr></thead><tbody>${inventory.map(i => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${i.name}</td><td class="px-4 py-3">${i.category || 'General'}</td><td class="px-4 py-3 text-right ${i.quantity <= i.threshold ? 'text-red-600 font-bold' : ''}">${i.quantity}</td><td class="px-4 py-3">${i.unit}</td><td class="px-4 py-3 text-right">${i.threshold}</td><td class="px-4 py-3 text-right">${formatCurrency(i.price)}</td><td class="px-4 py-3 text-center"><button onclick="window.openInventoryModal(${JSON.stringify(i).replace(/"/g, '&quot;')})" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteInventory('${i.id}', '${i.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`; }
+  function renderExpenses() {
+    const total = expenses.reduce((s,e)=>s+e.amount,0);
+    return `<div class="p-6"><div class="flex justify-between mb-6"><h1 class="text-2xl font-bold">Expenses</h1><button onclick="window.addExpense()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Expense</button></div><div class="bg-white rounded-xl overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="p-3">Date</th><th class="p-3">Category</th><th class="p-3">Description</th><th class="p-3 text-right">Amount</th><th class="p-3">Action</th></tr></thead><tbody>${expenses.map(e => `<tr class="border-b"><td class="p-3">${new Date(e.date).toLocaleDateString()}</td><td class="p-3">${e.category}</td><td class="p-3">${e.description}</td><td class="p-3 text-right text-red-600 font-semibold">${formatCurrency(e.amount)}</td><td class="p-3"><button onclick="window.deleteExpense('${e.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
+  }
   
-  function renderReviews() { return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Customer Reviews</h1><div class="grid gap-4">${reviews.map(r => `<div class="bg-white rounded-xl p-5"><div class="flex justify-between"><div><div class="flex text-yellow-400 text-lg">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div><p class="font-semibold">${r.customer || 'Customer'}</p><p class="text-gray-600 mt-1">${r.comment}</p><p class="text-xs text-gray-400 mt-1">${new Date(r.date).toLocaleDateString()}</p>${r.response ? `<div class="mt-3 p-3 bg-orange-50 rounded-lg"><p class="text-sm text-orange-700"><i class="fas fa-reply mr-2"></i>${r.response}</p></div>` : ''}</div><button onclick="window.addReviewResponse('${r.id}')" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-lg text-sm h-fit">${r.response ? 'Edit Reply' : 'Reply'}</button></div></div>`).join('')}</div></div>`; }
+  function renderLogs() {
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-4">Activity Logs</h1><div class="bg-white rounded-xl overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="p-3">Time</th><th class="p-3">Action</th><th class="p-3">Details</th></tr></thead><tbody>${activityLogs.slice(0, 50).map(log => `<tr class="border-b"><td class="p-3 text-sm">${log.timestamp}</td><td class="p-3 font-semibold text-orange-600">${log.action}</td><td class="p-3">${log.details}</td></tr>`).join('')}</tbody>}</div></div>`;
+  }
   
-  function renderExpenses() { const total = expenses.reduce((s,e)=>s+e.amount,0); return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Expense Tracking</h1></div><button onclick="window.addExpense()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Expense</button></div><div class="bg-white rounded-xl p-5 mb-6"><div class="flex justify-between"><div><p class="text-gray-500">Total Expenses</p><p class="text-3xl font-bold text-red-600">${formatCurrency(total)}</p></div></div></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Category</th><th class="px-4 py-3">Description</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Action</th></tr></thead><tbody>${expenses.map(e => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3">${new Date(e.date).toLocaleDateString()}</td><td class="px-4 py-3">${e.category}</td><td class="px-4 py-3">${e.description}</td><td class="px-4 py-3 text-right font-semibold text-red-600">${formatCurrency(e.amount)}</td><td class="px-4 py-3"><button onclick="window.deleteExpense('${e.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`; }
+  function renderSettings() {
+    return `<div class="p-6 max-w-2xl"><div class="bg-white rounded-xl p-6"><h3 class="font-bold text-xl mb-4">Restaurant Settings</h3><div class="space-y-3"><input id="restoName" placeholder="Restaurant Name" class="w-full border rounded-lg p-2" value="${restaurantSettings.name}"><textarea id="restoAddress" rows="2" placeholder="Address" class="w-full border rounded-lg p-2">${restaurantSettings.address}</textarea><input id="restoPhone" placeholder="Phone" class="w-full border rounded-lg p-2" value="${restaurantSettings.phone}"><input id="restoEmail" placeholder="Email" class="w-full border rounded-lg p-2" value="${restaurantSettings.email}"><input id="restoGST" placeholder="GST Number" class="w-full border rounded-lg p-2" value="${restaurantSettings.gstin}"><textarea id="kitchenNote" rows="2" placeholder="Kitchen Notes" class="w-full border rounded-lg p-2">${restaurantSettings.kitchenNote}</textarea><div class="grid grid-cols-2 gap-2"><label class="flex items-center gap-2"><input type="checkbox" id="cgstEnabled" ${taxConfig.cgst.enabled ? 'checked' : ''}> CGST (${taxConfig.cgst.rate}%)</label><label class="flex items-center gap-2"><input type="checkbox" id="sgstEnabled" ${taxConfig.sgst.enabled ? 'checked' : ''}> SGST (${taxConfig.sgst.rate}%)</label><label class="flex items-center gap-2"><input type="checkbox" id="serviceChargeEnabled" ${taxConfig.serviceCharge.enabled ? 'checked' : ''}> Service Charge</label><label class="flex items-center gap-2"><input type="checkbox" id="roundOffEnabled" ${taxConfig.roundOff ? 'checked' : ''}> Round Off</label></div><button onclick="window.saveSettings()" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold mt-4">Save Settings</button></div></div></div>`;
+  }
   
-  function renderLogs() { return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Activity Logs</h1><p class="text-gray-500 mb-6">Track all actions and system events</p><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Time</th><th class="px-4 py-3">Action</th><th class="px-4 py-3">Details</th><th class="px-4 py-3">User</th></tr></thead><tbody>${activityLogs.slice(0, 50).map(log => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 text-sm">${log.timestamp}</td><td class="px-4 py-3 font-mono text-sm font-semibold text-orange-600">${log.action}</td><td class="px-4 py-3">${log.details}</td><td class="px-4 py-3 text-sm">${log.user}</td></tr>`).join('')}</tbody>}</div></div>`; }
-  
-  function renderSettings() { return `<div class="p-6 max-w-4xl"><h1 class="text-2xl font-bold mb-2">Settings</h1><div class="bg-white rounded-xl p-6 space-y-6"><div><h3 class="font-bold text-lg">🏪 Restaurant Information</h3><input id="restoName" class="w-full border rounded-lg p-2 mb-2" value="${restaurantSettings.name}"><textarea id="restoAddress" rows="2" class="w-full border rounded-lg p-2 mb-2">${restaurantSettings.address}</textarea><input id="restoPhone" class="w-full border rounded-lg p-2 mb-2" value="${restaurantSettings.phone}"><input id="restoEmail" class="w-full border rounded-lg p-2" value="${restaurantSettings.email}"></div><div><h3 class="font-bold text-lg">📜 Tax & Legal (Separate)</h3><input id="restoGST" class="w-full border rounded-lg p-2 mb-2" placeholder="GST Number" value="${restaurantSettings.gstin}"><textarea id="kitchenNote" rows="2" class="w-full border rounded-lg p-2 mb-2" placeholder="Kitchen Notes">${restaurantSettings.kitchenNote}</textarea><div class="grid grid-cols-2 gap-3 mt-3"><label class="flex items-center gap-2"><input type="checkbox" id="cgstEnabled" ${taxConfig.cgst.enabled ? 'checked' : ''}> CGST (${taxConfig.cgst.rate}%)</label><label class="flex items-center gap-2"><input type="checkbox" id="sgstEnabled" ${taxConfig.sgst.enabled ? 'checked' : ''}> SGST (${taxConfig.sgst.rate}%)</label><label class="flex items-center gap-2"><input type="checkbox" id="serviceChargeEnabled" ${taxConfig.serviceCharge.enabled ? 'checked' : ''}> Service Charge (${taxConfig.serviceCharge.rate}%)</label><label class="flex items-center gap-2"><input type="checkbox" id="roundOffEnabled" ${taxConfig.roundOff ? 'checked' : ''}> Round Off</label></div></div><button onclick="window.saveSettings()" class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700">Save All Settings</button></div></div>`; }
+  function renderMenuItemModal() {
+    if (!showMenuItemModal) return '';
+    return `<div class="modal"><div class="modal-content"><h2 class="text-xl font-bold mb-4">${editingMenuItem ? 'Edit Item' : 'Add Item'}</h2><input id="itemName" placeholder="Item Name" class="w-full border rounded-lg p-2 mb-2" value="${editingMenuItem?.name || ''}"><input id="itemPrice" type="number" placeholder="Price" class="w-full border rounded-lg p-2 mb-2" value="${editingMenuItem?.price || ''}"><select id="itemCategory" class="w-full border rounded-lg p-2 mb-2"><option>Starters</option><option>Main Course</option><option>Breads</option><option>Beverages</option><option>Desserts</option></select><textarea id="itemDescription" rows="2" placeholder="Description" class="w-full border rounded-lg p-2 mb-2">${editingMenuItem?.description || ''}</textarea><div class="flex gap-4"><label><input type="radio" name="vegType" value="veg" ${editingMenuItem?.veg !== false ? 'checked' : ''}> Veg</label><label><input type="radio" name="vegType" value="nonveg" ${editingMenuItem?.veg === false ? 'checked' : ''}> Non-Veg</label></div><div class="upload-area p-3 text-center cursor-pointer" onclick="document.getElementById('imageUpload').click()"><i class="fas fa-cloud-upload-alt"></i> Upload Image</div><input type="file" id="imageUpload" accept="image/*" class="hidden"><div id="imagePreviewContainer" class="text-center mt-2 ${!imagePreviewUrl && !editingMenuItem?.image ? 'hidden' : ''}"><img id="imagePreview" src="${imagePreviewUrl || editingMenuItem?.image || ''}" class="image-preview mx-auto"></div><div class="flex gap-2 mt-4"><button onclick="window.saveMenuItem()" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">Save</button><button onclick="window.closeModals()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div></div></div>`;
+  }
   
   function renderModals() {
     let modalHtml = '';
-    if (showStaffModal) { modalHtml = `<div class="modal"><div class="modal-content"><h2 class="text-xl font-bold mb-4">${editingStaff ? 'Edit Staff' : 'Add Staff'}</h2><input id="staffName" placeholder="Full Name *" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.name || ''}"><input id="staffRole" placeholder="Role *" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.role || ''}"><input id="staffCategory" placeholder="Category (Kitchen/Service/Management)" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.category || ''}"><input id="staffSalary" type="number" placeholder="Monthly Salary *" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.salary || ''}"><input id="staffPhone" placeholder="Phone" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.phone || ''}"><div class="flex gap-2 mt-4"><button onclick="window.saveStaff()" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">Save</button><button onclick="window.closeModals()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div></div></div>`; }
-    if (showInventoryModal) { modalHtml = `<div class="modal"><div class="modal-content"><h2 class="text-xl font-bold mb-4">${editingInventory ? 'Edit Inventory' : 'Add Inventory Item'}</h2><input id="invName" placeholder="Item Name *" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.name || ''}"><input id="invCategory" placeholder="Category" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.category || ''}"><input id="invQuantity" type="number" placeholder="Quantity *" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.quantity || ''}"><input id="invUnit" placeholder="Unit *" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.unit || 'kg'}"><input id="invThreshold" type="number" placeholder="Low Stock Threshold" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.threshold || 10}"><input id="invPrice" type="number" placeholder="Price per Unit" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.price || 0}"><div class="flex gap-2 mt-4"><button onclick="window.saveInventory()" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">Save</button><button onclick="window.closeModals()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div></div></div>`; }
-    return modalHtml;
+    if (showStaffModal) {
+      modalHtml = `<div class="modal"><div class="modal-content"><h2 class="text-xl font-bold mb-4">${editingStaff ? 'Edit Staff' : 'Add Staff'}</h2><input id="staffName" placeholder="Name" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.name || ''}"><input id="staffRole" placeholder="Role" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.role || ''}"><input id="staffSalary" type="number" placeholder="Salary" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.salary || ''}"><input id="staffPhone" placeholder="Phone" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.phone || ''}"><div class="flex gap-2"><button onclick="window.saveStaff()" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">Save</button><button onclick="window.closeModals()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div></div></div>`;
+    }
+    if (showInventoryModal) {
+      modalHtml = `<div class="modal"><div class="modal-content"><h2 class="text-xl font-bold mb-4">${editingInventory ? 'Edit Inventory' : 'Add Inventory'}</h2><input id="invName" placeholder="Item Name" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.name || ''}"><input id="invQuantity" type="number" placeholder="Quantity" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.quantity || ''}"><input id="invUnit" placeholder="Unit" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.unit || 'kg'}"><input id="invThreshold" type="number" placeholder="Low Stock Alert" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.threshold || 10}"><input id="invPrice" type="number" placeholder="Price" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.price || 0}"><div class="flex gap-2"><button onclick="window.saveInventory()" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">Save</button><button onclick="window.closeModals()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div></div></div>`;
+    }
+    return modalHtml + renderMenuItemModal();
   }
   
   function renderMainContent() {
     switch(currentView) {
       case 'dashboard': return renderDashboard();
-      case 'menu': return renderMenu();
+      case 'orders': return renderOrders();
+      case 'menu': return renderMenuManagement();
       case 'orderhistory': return renderOrderHistory();
-      case 'analytics': return renderAnalytics();
-      case 'financial': return renderFinancial();
       case 'staff': return renderStaff();
       case 'inventory': return renderInventory();
-      case 'reviews': return renderReviews();
       case 'expenses': return renderExpenses();
       case 'logs': return renderLogs();
       case 'settings': return renderSettings();
@@ -719,11 +748,18 @@
     if (!root) return;
     if (!isLoggedIn) { root.innerHTML = renderLogin(); attachLoginEvents(); return; }
     if (darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
-    root.innerHTML = `<div class="min-h-screen bg-gray-50">${renderSidebar()}<div class="ml-64">${renderMainContent()}</div>${renderModals()}</div>`;
+    root.innerHTML = `<div class="min-h-screen bg-gray-50">${renderSidebar()}<div class="main-content">${renderTopBar()}${renderMainContent()}</div>${renderModals()}</div>`;
     
     document.querySelectorAll('.sidebar-nav').forEach(el => { el.addEventListener('click', () => { currentView = el.dataset.view; render(); }); });
     document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
+    
+    document.querySelectorAll('.acceptOrderBtn').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Accepted')));
+    document.querySelectorAll('.declineOrderBtn').forEach(btn => btn.addEventListener('click', () => { if(confirm('Decline this order?')) updateOrderStatus(btn.dataset.id, 'Declined'); }));
+    document.querySelectorAll('.prepareOrderBtn').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Preparing')));
+    document.querySelectorAll('.readyOrderBtn').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Ready')));
+    document.querySelectorAll('.serveOrderBtn').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Served')));
+    document.querySelectorAll('.printOrderBtn').forEach(btn => btn.addEventListener('click', () => { const order = JSON.parse(btn.dataset.order); printBill(order); }));
   }
   
   function attachLoginEvents() {
@@ -734,8 +770,22 @@
   }
   
   // Expose global functions
-  window.toggleMenuItem = toggleMenuItem;
-  window.updateMenuPrice = updateMenuPrice;
+  window.toggleMenuItem = toggleMenuItemAvailability;
+  window.deleteMenuItem = deleteMenuItem;
+  window.editMenuItem = (id) => { editingMenuItem = menuItems.find(i => i.id === id); selectedImageFile = null; imagePreviewUrl = editingMenuItem?.image; showMenuItemModal = true; render(); };
+  window.openMenuItemModal = () => { editingMenuItem = null; selectedImageFile = null; imagePreviewUrl = null; showMenuItemModal = true; render(); };
+  window.saveMenuItem = async () => {
+    const name = document.getElementById('itemName')?.value;
+    const price = parseFloat(document.getElementById('itemPrice')?.value);
+    const category = document.getElementById('itemCategory')?.value;
+    const description = document.getElementById('itemDescription')?.value;
+    const veg = document.querySelector('input[name="vegType"]:checked')?.value === 'veg';
+    const file = document.getElementById('imageUpload')?.files[0];
+    if (!name || !price) { showNotification('Please fill name and price', 'error'); return; }
+    if (editingMenuItem) await updateMenuItem(editingMenuItem.id, { name, price, category, description, veg }, file);
+    else await addMenuItem({ name, price, category, description, veg }, file);
+    showMenuItemModal = false; editingMenuItem = null; selectedImageFile = null; imagePreviewUrl = null; render();
+  };
   window.openStaffModal = openStaffModal;
   window.saveStaff = saveStaff;
   window.deleteStaff = deleteStaff;
@@ -745,9 +795,20 @@
   window.updateInventoryQuantity = updateInventoryQuantity;
   window.addExpense = addExpense;
   window.deleteExpense = deleteExpense;
-  window.addReviewResponse = addReviewResponse;
   window.saveSettings = saveSettings;
-  window.closeModals = () => { showStaffModal = false; showInventoryModal = false; editingStaff = null; editingInventory = null; render(); };
+  window.closeModals = () => { showStaffModal = false; showInventoryModal = false; showMenuItemModal = false; editingStaff = null; editingInventory = null; editingMenuItem = null; selectedImageFile = null; imagePreviewUrl = null; render(); };
+  
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'imageUpload') {
+      const file = e.target.files[0];
+      if (file) {
+        selectedImageFile = file;
+        const reader = new FileReader();
+        reader.onload = (ev) => { imagePreviewUrl = ev.target.result; render(); };
+        reader.readAsDataURL(file);
+      }
+    }
+  });
   
   checkAuthState();
 </script>
