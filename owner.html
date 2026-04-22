@@ -3,17 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>QR Dine | Owner Portal - Complete Restaurant Management</title>
+  <title>QR Dine | Owner Dashboard - Complete Restaurant Management</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     * { font-family: 'Inter', sans-serif; }
     body { background: #f1f5f9; }
+    
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
+    
     @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
     .toast-notification { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 12px; z-index: 1000; animation: slideIn 0.3s ease-out; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
     .stat-card { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); transition: all 0.3s ease; }
@@ -37,8 +39,43 @@
     .veg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
     .veg-dot.green { background: #22c55e; }
     .veg-dot.red { background: #ef4444; }
-    .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #f97316; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #f97316; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    .sidebar-container {
+      position: fixed;
+      left: 0;
+      top: 0;
+      height: 100vh;
+      width: 260px;
+      background: white;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+    }
+    .dark-mode .sidebar-container { background: #1e293b; }
+    .sidebar-nav-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .dark-mode .sidebar-footer { border-color: #334155; }
+    .main-content {
+      margin-left: 260px;
+      min-height: 100vh;
+    }
+    @media (max-width: 768px) {
+      .sidebar-container { transform: translateX(-100%); transition: transform 0.3s; }
+      .sidebar-container.open { transform: translateX(0); }
+      .main-content { margin-left: 0; }
+    }
+    .chart-container { height: 300px; position: relative; }
+    canvas { max-height: 280px; width: 100% !important; }
   </style>
 </head>
 <body>
@@ -70,7 +107,6 @@
     orderBy,
     serverTimestamp,
     getDocs,
-    getDoc,
     setDoc
   } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
   import {
@@ -91,9 +127,8 @@
   let isLoggedIn = false;
   let currentView = 'dashboard';
   let darkMode = localStorage.getItem('ownerDarkMode') === 'true';
-  let isLoading = true;
   
-  // Data from Firebase
+  // Data from Firebase (owner-specific)
   let menuItems = [];
   let orders = [];
   let staffMembers = [];
@@ -101,6 +136,7 @@
   let inventory = [];
   let reviews = [];
   let activityLogs = [];
+  
   let restaurantSettings = {
     name: 'Spice Garden',
     address: '123 Food Street, MG Road, Bangalore',
@@ -109,16 +145,12 @@
     gstin: '32ABCDE1234F1Z5'
   };
   
-  // Tax Configuration
   let taxConfig = {
     cgst: { rate: 2.5, enabled: true, name: 'CGST' },
     sgst: { rate: 2.5, enabled: true, name: 'SGST' },
     serviceCharge: { rate: 5, enabled: true, name: 'Service Charge' },
     roundOff: true
   };
-  
-  let expenseBreakdown = { Ingredients: 35, 'Staff Salary': 30, Rent: 15, Utilities: 10, Marketing: 6, Maintenance: 4 };
-  let revenueData = { monthly: [] };
   
   // UI State
   let showStaffModal = false;
@@ -129,6 +161,10 @@
   let editingMenuItem = null;
   let selectedImageFile = null;
   let imagePreviewUrl = null;
+  
+  // Chart instances
+  let revenueChart = null;
+  let categoryChart = null;
   
   // Unsubscribe functions
   let unsubscribeMenu = null;
@@ -149,6 +185,7 @@
   }
   
   function formatCurrency(amount) { return '₹' + amount.toLocaleString(); }
+  function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
   
   async function addLog(action, details) {
     if (!currentUser) return;
@@ -189,7 +226,8 @@
       snapshot.forEach((doc) => {
         orders.push({ id: doc.id, ...doc.data() });
       });
-      if (currentView === 'orderhistory' || currentView === 'dashboard') render();
+      console.log(`✅ Owner: Loaded ${orders.length} orders for restaurant ${restaurantSettings.name}`);
+      if (currentView === 'orderhistory' || currentView === 'dashboard' || currentView === 'analytics') render();
     });
   }
   
@@ -243,12 +281,19 @@
     if (unsubscribeLogs) unsubscribeLogs();
     unsubscribeLogs = onSnapshot(logQuery, (snapshot) => {
       activityLogs = [];
-      snapshot.forEach((doc) => { activityLogs.push({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp?.toDate?.()?.toLocaleString() || new Date().toLocaleString() }); });
+      snapshot.forEach((doc) => { 
+        const data = doc.data();
+        activityLogs.push({ 
+          id: doc.id, 
+          ...data, 
+          timestamp: data.timestamp?.toDate?.()?.toLocaleString() || new Date().toLocaleString() 
+        });
+      });
       if (currentView === 'logs') render();
     });
   }
   
-  // ======================== MENU CRUD OPERATIONS ========================
+  // ======================== MENU CRUD ========================
   function compressImage(file) {
     return new Promise((resolve) => {
       if (!file) { resolve(null); return; }
@@ -403,27 +448,47 @@
       currentUser = userCredential.user;
       isLoggedIn = true;
       localStorage.setItem('owner_logged', 'true');
+      
+      // Load restaurant data
+      const q = query(collection(db, "restaurants"), where("userId", "==", currentUser.uid));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const data = snapshot.docs[0].data();
+        restaurantSettings.name = data.name || restaurantSettings.name;
+        restaurantSettings.address = data.address || restaurantSettings.address;
+        restaurantSettings.phone = data.phone || restaurantSettings.phone;
+      }
+      
       await addLog('OWNER_LOGIN', 'Logged in');
       initializeDataListeners();
       render();
     } catch (error) {
-      showNotification('Invalid credentials. Use owner@resto.com / owner123', 'error');
+      showNotification('Invalid credentials', 'error');
     }
   }
   
-  async function register(email, password, name, restoName) {
+  async function register(email, password, name, restoName, address, phone) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       currentUser = userCredential.user;
       await updateProfile(currentUser, { displayName: name });
+      
       await setDoc(doc(db, "restaurants", currentUser.uid), {
+        userId: currentUser.uid,
         name: restoName,
         owner: name,
         email: email,
+        address: address,
+        phone: phone,
         createdAt: serverTimestamp()
       });
+      
       isLoggedIn = true;
       localStorage.setItem('owner_logged', 'true');
+      restaurantSettings.name = restoName;
+      restaurantSettings.address = address;
+      restaurantSettings.phone = phone;
+      
       await addLog('OWNER_REGISTER', `Registered restaurant: ${restoName}`);
       initializeDefaultData();
       initializeDataListeners();
@@ -464,14 +529,26 @@
   function toggleDarkMode() {
     darkMode = !darkMode;
     localStorage.setItem('ownerDarkMode', darkMode);
+    if (darkMode) document.body.classList.add('dark-mode');
+    else document.body.classList.remove('dark-mode');
     render();
   }
   
   function checkAuthState() {
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
         isLoggedIn = true;
+        
+        const q = query(collection(db, "restaurants"), where("userId", "==", currentUser.uid));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const data = snapshot.docs[0].data();
+          restaurantSettings.name = data.name || restaurantSettings.name;
+          restaurantSettings.address = data.address || restaurantSettings.address;
+          restaurantSettings.phone = data.phone || restaurantSettings.phone;
+        }
+        
         initializeDataListeners();
         render();
       } else {
@@ -486,10 +563,9 @@
     const totalOrders = orders.length;
     const avgOrderValue = totalOrders ? orders.reduce((s, o) => s + (o.totalPrice || 0), 0) / totalOrders : 0;
     const avgRating = reviews.length ? reviews.reduce((s, r) => s + (r.rating || 4), 0) / reviews.length : 4.5;
-    const popularItems = [...menuItems].sort((a, b) => (b.orders || 0) - (a.orders || 0)).slice(3);
     const lowStockItems = inventory.filter(i => i.quantity <= i.threshold);
     const bestSeller = menuItems.sort((a, b) => (b.orders || 0) - (a.orders || 0))[0];
-    return { totalOrders, avgOrderValue, avgRating, popularItems, lowStockItems, bestSeller };
+    return { totalOrders, avgOrderValue, avgRating, lowStockItems, bestSeller };
   }
   
   function getFinancialStats() {
@@ -500,13 +576,32 @@
     return { totalRevenue, totalExpenses, totalProfit, profitMargin };
   }
   
+  function getAnalyticsData() {
+    const monthlySales = {};
+    const categorySales = {};
+    orders.forEach(order => {
+      if (order.status !== 'Declined') {
+        const date = new Date(order.timestamp);
+        const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+        monthlySales[monthYear] = (monthlySales[monthYear] || 0) + order.totalPrice;
+        order.items?.forEach(item => {
+          categorySales[item.name] = (categorySales[item.name] || 0) + (item.price * item.quantity);
+        });
+      }
+    });
+    const sortedMonths = Object.keys(monthlySales).slice(-6);
+    const monthlyData = sortedMonths.map(m => monthlySales[m]);
+    const topItems = Object.entries(categorySales).sort((a,b) => b[1] - a[1]).slice(5);
+    return { monthlyLabels: sortedMonths, monthlyData, topItems };
+  }
+  
   // ======================== RENDER FUNCTIONS ========================
   function renderLogin() {
     return `<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100">
       <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
         <div class="text-center mb-6"><div class="inline-block bg-orange-100 rounded-full p-4 mb-4"><i class="fas fa-crown text-5xl text-orange-600"></i></div><h2 class="text-2xl font-bold">Owner Portal</h2><p class="text-gray-500 text-sm">Complete Restaurant Management</p></div>
         <div id="loginForm"><div class="space-y-4"><input type="email" id="loginEmail" class="w-full border rounded-lg px-4 py-2" placeholder="Email"><input type="password" id="loginPassword" class="w-full border rounded-lg px-4 py-2" placeholder="Password"><button id="loginBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold">Login</button><p class="text-center text-sm">New owner? <button id="showRegisterBtn" class="text-orange-600">Register</button></p></div></div>
-        <div id="registerForm" class="hidden"><div class="space-y-4"><input type="text" id="regName" class="w-full border rounded-lg px-4 py-2" placeholder="Owner Name"><input type="text" id="regRestoName" class="w-full border rounded-lg px-4 py-2" placeholder="Restaurant Name"><input type="email" id="regEmail" class="w-full border rounded-lg px-4 py-2" placeholder="Email"><input type="password" id="regPassword" class="w-full border rounded-lg px-4 py-2" placeholder="Password"><button id="registerBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold">Register</button><p class="text-center text-sm">Already have account? <button id="showLoginBtn" class="text-orange-600">Login</button></p></div></div>
+        <div id="registerForm" class="hidden"><div class="space-y-4"><input type="text" id="regName" class="w-full border rounded-lg px-4 py-2" placeholder="Owner Name"><input type="text" id="regRestoName" class="w-full border rounded-lg px-4 py-2" placeholder="Restaurant Name"><input type="email" id="regEmail" class="w-full border rounded-lg px-4 py-2" placeholder="Email"><input type="password" id="regPassword" class="w-full border rounded-lg px-4 py-2" placeholder="Password"><input type="text" id="regAddress" class="w-full border rounded-lg px-4 py-2" placeholder="Address"><input type="tel" id="regPhone" class="w-full border rounded-lg px-4 py-2" placeholder="Phone"><button id="registerBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold">Register</button><p class="text-center text-sm">Already have account? <button id="showLoginBtn" class="text-orange-600">Login</button></p></div></div>
       </div>
     </div>`;
   }
@@ -514,59 +609,55 @@
   function renderSidebar() {
     const navItems = [
       { id: 'dashboard', icon: 'fa-chart-line', label: 'Dashboard' },
+      { id: 'orders', icon: 'fa-clipboard-list', label: 'Orders' },
       { id: 'menu', icon: 'fa-utensils', label: 'Menu' },
-      { id: 'orderhistory', icon: 'fa-history', label: 'Order History' },
-      { id: 'financial', icon: 'fa-rupee-sign', label: 'Financial' },
+      { id: 'analytics', icon: 'fa-chart-pie', label: 'Analytics' },
       { id: 'staff', icon: 'fa-users', label: 'Staff' },
       { id: 'inventory', icon: 'fa-boxes', label: 'Inventory' },
       { id: 'reviews', icon: 'fa-star', label: 'Reviews' },
       { id: 'expenses', icon: 'fa-money-bill-wave', label: 'Expenses' },
-      { id: 'logs', icon: 'fa-history', label: 'Logs' }
+      { id: 'logs', icon: 'fa-history', label: 'Logs' },
+      { id: 'settings', icon: 'fa-cog', label: 'Settings' }
     ];
-    return `<div class="fixed left-0 top-0 h-full w-64 bg-white shadow-xl z-20"><div class="p-6 border-b"><div class="flex items-center gap-2"><i class="fas fa-crown text-orange-500 text-2xl"></i><span class="font-bold text-xl">QR Dine</span></div><p class="text-xs text-gray-500 mt-1">Owner Portal</p></div>
-    <nav class="p-4 space-y-1">${navItems.map(item => `<div class="sidebar-nav w-full px-4 py-3 rounded-lg flex items-center gap-3 transition ${currentView === item.id ? 'active' : 'text-gray-600'}" data-view="${item.id}"><i class="fas ${item.icon} w-5"></i><span>${item.label}</span></div>`).join('')}</nav>
-    <div class="absolute bottom-0 left-0 right-0 p-4 border-t"><div class="flex items-center justify-between mb-3"><button id="darkModeToggle" class="text-gray-600"><i class="fas ${darkMode ? 'fa-sun' : 'fa-moon'}"></i></button><button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-lg">Logout</button></div><div class="text-xs text-gray-500 text-center">${currentUser?.email}</div></div></div>`;
-  }
-  
-  function renderMenuManagement() {
-    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Menu Management</h1><p class="text-gray-500">Add, edit, and manage menu items</p></div><button onclick="window.openMenuItemModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Item</button></div>
-    <div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[800px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Image</th><th class="px-4 py-3">Item</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Price</th><th class="px-4 py-3">Type</th><th class="px-4 py-3 text-center">Status</th><th class="px-4 py-3 text-center">Actions</th></tr></thead><tbody>${menuItems.map(item => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3"><img src="${item.image}" class="w-12 h-12 rounded-lg object-cover" onerror="this.src='https://placehold.co/60x60/F97316/white?text=Food'"></td><td class="px-4 py-3 font-medium"><span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>${item.name}${item.popular ? ' 🔥' : ''}<div class="text-xs text-gray-400">${item.description?.substring(0, 40) || ''}</div></td><td class="px-4 py-3">${item.category}</td><td class="px-4 py-3 text-right font-semibold">${formatCurrency(item.price)}</td><td class="px-4 py-3"><span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>${item.veg ? 'Veg' : 'Non-Veg'}</td><td class="px-4 py-3 text-center"><button onclick="window.toggleMenuItem('${item.id}', ${item.available}, '${item.name}')" class="px-2 py-1 rounded text-xs ${item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${item.available ? 'Available' : 'Out of Stock'}</button></td><td class="px-4 py-3 text-center"><button onclick="window.editMenuItem('${item.id}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteMenuItem('${item.id}', '${item.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div></div>`;
-  }
-  
-  function renderOrderHistory() {
-    const recentOrders = orders.slice(0, 50);
-    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Order History</h1><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[700px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Order ID</th><th class="px-4 py-3">Table</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Date</th></tr></thead><tbody>${recentOrders.map(o => `<tr class="border-b"><td class="px-4 py-3 font-mono text-sm">${o.id?.slice(-8)}</td><td class="px-4 py-3">${o.tableNumber || '-'}</td><td class="px-4 py-3 text-right font-semibold">${formatCurrency(o.totalPrice || 0)}</td><td class="px-4 py-3"><span class="badge ${o.status === 'Completed' ? 'badge-completed' : o.status === 'Preparing' ? 'badge-preparing' : 'badge-pending'}">${o.status || 'Pending'}</span></td><td class="px-4 py-3 text-sm">${o.timestamp?.toDate?.()?.toLocaleDateString() || new Date(o.timestamp).toLocaleDateString()}</td></tr>`).join('')}</tbody></table></div></div>`;
-  }
-  
-  function renderFinancial() {
-    const financial = getFinancialStats();
-    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Financial Overview</h1><div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6"><div class="bg-white rounded-xl p-5"><p class="text-gray-500">Total Revenue</p><p class="text-2xl font-bold text-green-600">${formatCurrency(financial.totalRevenue)}</p></div><div class="bg-white rounded-xl p-5"><p class="text-gray-500">Total Expenses</p><p class="text-2xl font-bold text-red-600">${formatCurrency(financial.totalExpenses)}</p></div><div class="bg-white rounded-xl p-5"><p class="text-gray-500">Net Profit</p><p class="text-2xl font-bold text-blue-600">${formatCurrency(financial.totalProfit)}</p></div><div class="bg-white rounded-xl p-5"><p class="text-gray-500">Profit Margin</p><p class="text-2xl font-bold text-purple-600">${financial.profitMargin}%</p></div></div><div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">💰 Tax Configuration</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-4"><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">CGST</p><p class="text-xl font-bold">${taxConfig.cgst.enabled ? taxConfig.cgst.rate + '%' : 'Disabled'}</p></div><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">SGST</p><p class="text-xl font-bold">${taxConfig.sgst.enabled ? taxConfig.sgst.rate + '%' : 'Disabled'}</p></div><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">Service Charge</p><p class="text-xl font-bold">${taxConfig.serviceCharge.enabled ? taxConfig.serviceCharge.rate + '%' : 'Disabled'}</p></div><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">Round Off</p><p class="text-xl font-bold">${taxConfig.roundOff ? 'Enabled' : 'Disabled'}</p></div></div></div></div>`;
-  }
-  
-  function renderStaff() {
-    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><h1 class="text-2xl font-bold">Staff Management</h1><button onclick="window.openStaffModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Staff</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Role</th><th class="px-4 py-3 text-right">Salary</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3 text-center">Actions</th></tr></thead><tbody>${staffMembers.map(s => `<tr class="border-b"><td class="px-4 py-3 font-medium">${s.name}</td><td class="px-4 py-3">${s.role}</td><td class="px-4 py-3 text-right">${formatCurrency(s.salary)}</td><td class="px-4 py-3">${s.phone}</td><td class="px-4 py-3 text-center"><button onclick="window.editStaff('${s.id}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteStaff('${s.id}', '${s.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
-  }
-  
-  function renderInventory() {
-    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><h1 class="text-2xl font-bold">Inventory Management</h1><button onclick="window.openInventoryModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Item</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Item</th><th class="px-4 py-3 text-right">Quantity</th><th class="px-4 py-3">Unit</th><th class="px-4 py-3 text-right">Threshold</th><th class="px-4 py-3 text-center">Actions</th></tr></thead><tbody>${inventory.map(i => `<tr class="border-b"><td class="px-4 py-3 font-medium">${i.name}</td><td class="px-4 py-3 text-right ${i.quantity <= i.threshold ? 'text-red-600 font-bold' : ''}">${i.quantity}</td><td class="px-4 py-3">${i.unit}</td><td class="px-4 py-3 text-right">${i.threshold}</td><td class="px-4 py-3 text-center"><button onclick="window.editInventory('${i.id}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteInventory('${i.id}', '${i.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
-  }
-  
-  function renderReviews() {
-    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Customer Reviews</h1><div class="grid gap-4">${reviews.map(r => `<div class="bg-white rounded-xl p-5"><div class="flex justify-between"><div><div class="flex text-yellow-400">${'★'.repeat(r.rating || 4)}${'☆'.repeat(5 - (r.rating || 4))}</div><p class="font-semibold">${r.customerName || 'Customer'}</p><p class="text-gray-600 mt-1">${r.comment}</p><p class="text-xs text-gray-400">${new Date(r.createdAt?.toDate?.() || r.date).toLocaleDateString()}</p>${r.response ? `<div class="mt-3 p-3 bg-orange-50 rounded-lg"><p class="text-sm text-orange-700"><i class="fas fa-reply mr-2"></i>${r.response}</p></div>` : ''}</div><button onclick="window.addReviewResponse('${r.id}')" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-lg text-sm">${r.response ? 'Edit Reply' : 'Reply'}</button></div></div>`).join('')}</div></div>`;
-  }
-  
-  function renderExpenses() {
-    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><h1 class="text-2xl font-bold">Expense Tracking</h1><button onclick="window.addExpensePrompt()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Expense</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Category</th><th class="px-4 py-3">Description</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Action</th></tr></thead><tbody>${expenses.map(e => `<tr class="border-b"><td class="px-4 py-3">${new Date(e.date).toLocaleDateString()}</td><td class="px-4 py-3">${e.category}</td><td class="px-4 py-3">${e.description}</td><td class="px-4 py-3 text-right font-semibold text-red-600">${formatCurrency(e.amount)}</td><td class="px-4 py-3"><button onclick="window.deleteExpense('${e.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
-  }
-  
-  function renderLogs() {
-    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Activity Logs</h1><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Time</th><th class="px-4 py-3">Action</th><th class="px-4 py-3">Details</th></tr></thead><tbody>${activityLogs.slice(0, 50).map(log => `<tr class="border-b"><td class="px-4 py-3 text-sm">${log.timestamp || new Date().toLocaleString()}</td><td class="px-4 py-3 font-semibold text-orange-600">${log.action}</td><td class="px-4 py-3">${log.details}</td></tr>`).join('')}</tbody>}</div></div>`;
+    
+    return `
+      <div class="sidebar-container ${darkMode ? 'dark-mode' : ''}">
+        <div class="p-5 border-b">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-crown text-orange-500 text-2xl"></i>
+            <span class="font-bold text-xl">QR Dine</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">Owner Portal</p>
+        </div>
+        <div class="sidebar-nav-container">
+          ${navItems.map(item => `
+            <div class="sidebar-nav w-full px-4 py-3 rounded-lg flex items-center gap-3 transition ${currentView === item.id ? 'active' : 'text-gray-600'}" data-view="${item.id}">
+              <i class="fas ${item.icon} w-5"></i>
+              <span>${item.label}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="sidebar-footer">
+          <div class="flex items-center justify-between mb-3">
+            <button id="darkModeToggle" class="text-gray-600 hover:text-orange-500 transition">
+              <i class="fas ${darkMode ? 'fa-sun' : 'fa-moon'} text-lg"></i>
+            </button>
+            <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition">
+              <i class="fas fa-sign-out-alt mr-1"></i> Logout
+            </button>
+          </div>
+          <div class="text-xs text-gray-500 text-center truncate">
+            <i class="fas fa-user-circle mr-1"></i> ${currentUser?.email || 'owner@resto.com'}
+          </div>
+        </div>
+      </div>
+    `;
   }
   
   function renderDashboard() {
     const business = getBusinessStats();
     const financial = getFinancialStats();
-    return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold">Welcome back, Owner!</h1></div>
+    return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold">Welcome back, ${restaurantSettings.name}!</h1><p class="text-gray-500">Complete business overview</p></div>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
       <div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500">Total Revenue</p><p class="text-2xl font-bold text-green-600">${formatCurrency(financial.totalRevenue)}</p></div>
       <div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500">Total Orders</p><p class="text-2xl font-bold text-blue-600">${business.totalOrders}</p></div>
@@ -579,19 +670,66 @@
     </div></div>`;
   }
   
-  function renderMainContent() {
-    switch(currentView) {
-      case 'dashboard': return renderDashboard();
-      case 'menu': return renderMenuManagement();
-      case 'orderhistory': return renderOrderHistory();
-      case 'financial': return renderFinancial();
-      case 'staff': return renderStaff();
-      case 'inventory': return renderInventory();
-      case 'reviews': return renderReviews();
-      case 'expenses': return renderExpenses();
-      case 'logs': return renderLogs();
-      default: return renderDashboard();
-    }
+  function renderOrders() {
+    return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold">Orders</h1><p class="text-gray-500">Manage and track customer orders</p></div>
+    <div class="space-y-4">${orders.length === 0 ? '<div class="bg-white rounded-xl p-12 text-center"><i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No orders yet. Orders will appear here when customers place them.</p></div>' : orders.map(order => `
+      <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 ${order.status === 'Pending' ? 'border-yellow-400' : order.status === 'Preparing' ? 'border-blue-400' : 'border-green-400'}">
+        <div class="flex justify-between items-start mb-3 flex-wrap gap-3">
+          <div><h3 class="font-bold text-lg">Bill #${order.billNumber || '0001'}</h3><p class="text-sm text-gray-500">Table ${order.tableNumber} • ${new Date(order.timestamp).toLocaleString()}</p></div>
+          <div class="text-right"><p class="text-xl font-bold text-orange-600">${formatCurrency(order.totalPrice)}</p><span class="px-2 py-1 rounded-full text-xs ${order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : order.status === 'Preparing' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}">${order.status}</span></div>
+        </div>
+        <div class="border-t pt-3 mb-3">${order.items?.map(item => `<div class="flex justify-between text-sm py-1"><span>${escapeHtml(item.name)} x${item.quantity}</span><span>${formatCurrency(item.price * item.quantity)}</span></div>`).join('')}</div>
+        <div class="flex gap-2 flex-wrap">
+          ${order.status === 'Pending' ? `<button class="acceptOrderBtn bg-green-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Accept Order</button><button class="declineOrderBtn bg-red-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Decline</button>` : ''}
+          ${order.status === 'Accepted' ? `<button class="prepareOrderBtn bg-purple-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Start Preparing</button>` : ''}
+          ${order.status === 'Preparing' ? `<button class="readyOrderBtn bg-blue-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Mark Ready</button>` : ''}
+          ${order.status === 'Ready' ? `<button class="serveOrderBtn bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm" data-id="${order.id}">Serve Order</button>` : ''}
+          <button class="printOrderBtn bg-gray-500 text-white px-4 py-2 rounded-lg text-sm" data-order='${JSON.stringify(order)}'><i class="fas fa-print"></i> Print Bill</button>
+        </div>
+      </div>
+    `).join('')}</div></div>`;
+  }
+  
+  function renderMenuManagement() {
+    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Menu Management</h1><p class="text-gray-500">Add, edit, and manage menu items</p></div><button onclick="window.openMenuItemModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Item</button></div>
+    <div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[800px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Image</th><th class="px-4 py-3">Item</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Price</th><th class="px-4 py-3">Type</th><th class="px-4 py-3 text-center">Status</th><th class="px-4 py-3 text-center">Actions</th></tr></thead><tbody>${menuItems.map(item => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3"><img src="${item.image}" class="w-12 h-12 rounded-lg object-cover" onerror="this.src='https://placehold.co/60x60/F97316/white?text=Food'"></td><td class="px-4 py-3 font-medium"><span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>${item.name}<div class="text-xs text-gray-400">${item.description?.substring(0, 40) || ''}</div></td><td class="px-4 py-3">${item.category}</td><td class="px-4 py-3 text-right font-semibold">${formatCurrency(item.price)}</td><td class="px-4 py-3"><span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>${item.veg ? 'Veg' : 'Non-Veg'}</td><td class="px-4 py-3 text-center"><button onclick="window.toggleMenuItem('${item.id}', ${item.available}, '${item.name}')" class="px-2 py-1 rounded text-xs ${item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${item.available ? 'Available' : 'Out'}</button></td><td class="px-4 py-3 text-center"><button onclick="window.editMenuItem('${item.id}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteMenuItem('${item.id}', '${item.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
+  }
+  
+  function renderAnalytics() {
+    const analytics = getAnalyticsData();
+    const financial = getFinancialStats();
+    setTimeout(() => {
+      const revCtx = document.getElementById('revenueChart')?.getContext('2d');
+      if (revCtx) {
+        if (revenueChart) revenueChart.destroy();
+        revenueChart = new Chart(revCtx, { type: 'line', data: { labels: analytics.monthlyLabels, datasets: [{ label: 'Revenue (₹)', data: analytics.monthlyData, borderColor: '#f97316', fill: true }] }, options: { responsive: true } });
+      }
+    }, 100);
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Analytics Dashboard</h1><div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6"><div class="bg-white rounded-xl p-5"><p class="text-gray-500">Total Revenue</p><p class="text-2xl font-bold text-green-600">${formatCurrency(financial.totalRevenue)}</p></div><div class="bg-white rounded-xl p-5"><p class="text-gray-500">Total Orders</p><p class="text-2xl font-bold text-blue-600">${orders.length}</p></div><div class="bg-white rounded-xl p-5"><p class="text-gray-500">Avg Order Value</p><p class="text-2xl font-bold text-orange-600">${formatCurrency(financial.totalRevenue / (orders.length || 1))}</p></div></div><div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">Revenue Trend</h3><div class="h-80"><canvas id="revenueChart"></canvas></div></div></div>`;
+  }
+  
+  function renderStaff() {
+    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><h1 class="text-2xl font-bold">Staff Management</h1><button onclick="window.openStaffModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Staff</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Role</th><th class="px-4 py-3 text-right">Salary</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3 text-center">Actions</th></tr></thead><tbody>${staffMembers.map(s => `<tr class="border-b"><td class="px-4 py-3 font-medium">${s.name}</td><td class="px-4 py-3">${s.role}</td><td class="px-4 py-3 text-right">${formatCurrency(s.salary)}</td><td class="px-4 py-3">${s.phone}</td><td class="px-4 py-3 text-center"><button onclick="window.editStaff('${s.id}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteStaff('${s.id}', '${s.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
+  }
+  
+  function renderInventory() {
+    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><h1 class="text-2xl font-bold">Inventory Management</h1><button onclick="window.openInventoryModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Item</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Item</th><th class="px-4 py-3 text-right">Quantity</th><th class="px-4 py-3">Unit</th><th class="px-4 py-3 text-right">Threshold</th><th class="px-4 py-3 text-center">Actions</th></tr></thead><tbody>${inventory.map(i => `<tr class="border-b"><td class="px-4 py-3 font-medium">${i.name}</td><td class="px-4 py-3 text-right ${i.quantity <= i.threshold ? 'text-red-600 font-bold' : ''}">${i.quantity}</td><td class="px-4 py-3">${i.unit}</td><td class="px-4 py-3 text-right">${i.threshold}</td><td class="px-4 py-3 text-center"><button onclick="window.editInventory('${i.id}')" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteInventory('${i.id}', '${i.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
+  }
+  
+  function renderReviews() {
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Customer Reviews</h1><div class="grid gap-4">${reviews.map(r => `<div class="bg-white rounded-xl p-5"><div class="flex justify-between"><div><div class="flex text-yellow-400">${'★'.repeat(r.rating || 4)}${'☆'.repeat(5 - (r.rating || 4))}</div><p class="font-semibold">${r.customerName || 'Customer'}</p><p class="text-gray-600 mt-1">${r.comment}</p>${r.response ? `<div class="mt-3 p-3 bg-orange-50 rounded-lg"><p class="text-sm text-orange-700">${r.response}</p></div>` : ''}</div><button onclick="window.addReviewResponse('${r.id}')" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-lg text-sm">${r.response ? 'Edit Reply' : 'Reply'}</button></div></div>`).join('')}</div></div>`;
+  }
+  
+  function renderExpenses() {
+    return `<div class="p-6"><div class="flex justify-between items-center mb-6"><h1 class="text-2xl font-bold">Expense Tracking</h1><button onclick="window.addExpensePrompt()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus"></i> Add Expense</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Category</th><th class="px-4 py-3">Description</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Action</th></tr></thead><tbody>${expenses.map(e => `<tr class="border-b"><td class="px-4 py-3">${new Date(e.date).toLocaleDateString()}</td><td class="px-4 py-3">${e.category}</td><td class="px-4 py-3">${e.description}</td><td class="px-4 py-3 text-right font-semibold text-red-600">${formatCurrency(e.amount)}</td><td class="px-4 py-3"><button onclick="window.deleteExpense('${e.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`;
+  }
+  
+  function renderLogs() {
+    return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Activity Logs</h1><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Time</th><th class="px-4 py-3">Action</th><th class="px-4 py-3">Details</th></tr></thead><tbody>${activityLogs.slice(0, 50).map(log => `<tr class="border-b"><td class="px-4 py-3 text-sm">${log.timestamp || new Date().toLocaleString()}</td><td class="px-4 py-3 font-semibold text-orange-600">${log.action}</td><td class="px-4 py-3">${log.details}</td></tr>`).join('')}</tbody>}</div></div>`;
+  }
+  
+  function renderSettings() {
+    return `<div class="p-6 max-w-4xl"><h1 class="text-2xl font-bold mb-2">Settings</h1><div class="bg-white rounded-xl p-6 space-y-6"><div><h3 class="font-bold text-lg">🏪 Restaurant Information</h3><input id="restoName" class="w-full border rounded-lg p-2 mb-2" value="${restaurantSettings.name}"><textarea id="restoAddress" rows="2" class="w-full border rounded-lg p-2 mb-2">${restaurantSettings.address}</textarea><input id="restoPhone" class="w-full border rounded-lg p-2 mb-2" value="${restaurantSettings.phone}"><input id="restoEmail" class="w-full border rounded-lg p-2" value="${restaurantSettings.email}"></div><button onclick="window.saveSettings()" class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold">Save Settings</button></div></div>`;
   }
   
   function renderModals() {
@@ -608,12 +746,28 @@
     return modalHtml;
   }
   
+  function renderMainContent() {
+    switch(currentView) {
+      case 'dashboard': return renderDashboard();
+      case 'orders': return renderOrders();
+      case 'menu': return renderMenuManagement();
+      case 'analytics': return renderAnalytics();
+      case 'staff': return renderStaff();
+      case 'inventory': return renderInventory();
+      case 'reviews': return renderReviews();
+      case 'expenses': return renderExpenses();
+      case 'logs': return renderLogs();
+      case 'settings': return renderSettings();
+      default: return renderDashboard();
+    }
+  }
+  
   function render() {
     const root = document.getElementById('owner-portal');
     if (!root) return;
     if (!isLoggedIn) { root.innerHTML = renderLogin(); attachLoginEvents(); return; }
     if (darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
-    root.innerHTML = `<div class="min-h-screen bg-gray-50">${renderSidebar()}<div class="ml-64">${renderMainContent()}</div>${renderModals()}</div>`;
+    root.innerHTML = `<div class="min-h-screen bg-gray-50">${renderSidebar()}<div class="main-content">${renderMainContent()}</div>${renderModals()}</div>`;
     
     document.querySelectorAll('.sidebar-nav').forEach(el => { el.addEventListener('click', () => { currentView = el.dataset.view; render(); }); });
     document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
@@ -624,7 +778,7 @@
     document.getElementById('loginBtn')?.addEventListener('click', () => { const email = document.getElementById('loginEmail')?.value; const pwd = document.getElementById('loginPassword')?.value; if(email && pwd) login(email, pwd); });
     document.getElementById('showRegisterBtn')?.addEventListener('click', () => { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('registerForm').classList.remove('hidden'); });
     document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('registerForm').classList.add('hidden'); document.getElementById('loginForm').classList.remove('hidden'); });
-    document.getElementById('registerBtn')?.addEventListener('click', () => { const name = document.getElementById('regName')?.value; const resto = document.getElementById('regRestoName')?.value; const email = document.getElementById('regEmail')?.value; const pwd = document.getElementById('regPassword')?.value; if(name && resto && email && pwd) register(email, pwd, name, resto); });
+    document.getElementById('registerBtn')?.addEventListener('click', () => { const name = document.getElementById('regName')?.value; const resto = document.getElementById('regRestoName')?.value; const email = document.getElementById('regEmail')?.value; const pwd = document.getElementById('regPassword')?.value; const addr = document.getElementById('regAddress')?.value; const phone = document.getElementById('regPhone')?.value; if(name && resto && email && pwd) register(email, pwd, name, resto, addr, phone); });
   }
   
   // Global Functions
@@ -681,7 +835,28 @@
     const response = prompt('Add response to review:');
     if (response) addReviewResponse(id, response);
   };
+  window.saveSettings = () => {
+    restaurantSettings.name = document.getElementById('restoName')?.value || restaurantSettings.name;
+    restaurantSettings.address = document.getElementById('restoAddress')?.value || restaurantSettings.address;
+    restaurantSettings.phone = document.getElementById('restoPhone')?.value || restaurantSettings.phone;
+    restaurantSettings.email = document.getElementById('restoEmail')?.value || restaurantSettings.email;
+    showNotification('Settings saved!', 'success');
+    render();
+  };
   window.closeModals = () => { showStaffModal = false; showInventoryModal = false; showMenuItemModal = false; editingStaff = null; editingInventory = null; editingMenuItem = null; selectedImageFile = null; imagePreviewUrl = null; render(); };
+  
+  // Order action handlers
+  window.acceptOrder = async (id) => { await updateDoc(doc(db, "orders", id), { status: 'Accepted' }); showNotification('Order accepted'); render(); };
+  window.declineOrder = async (id) => { if(confirm('Decline this order?')) await updateDoc(doc(db, "orders", id), { status: 'Declined' }); render(); };
+  window.prepareOrder = async (id) => { await updateDoc(doc(db, "orders", id), { status: 'Preparing' }); render(); };
+  window.readyOrder = async (id) => { await updateDoc(doc(db, "orders", id), { status: 'Ready' }); render(); };
+  window.serveOrder = async (id) => { await updateDoc(doc(db, "orders", id), { status: 'Served' }); render(); };
+  window.printBill = (order) => {
+    const printWindow = window.open('', '_blank');
+    const orderDate = new Date(order.timestamp).toLocaleString();
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Bill #${order.billNumber}</title><style>body{font-family:monospace;padding:20px;}</style></head><body><div><h2>${restaurantSettings.name}</h2><p>Bill: ${order.billNumber} | Table: ${order.tableNumber}</p><p>Date: ${orderDate}</p><table border="1"><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>${order.items.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${formatCurrency(i.price)}</td><td>${formatCurrency(i.price * i.quantity)}</td></tr>`).join('')}</table><h3>Total: ${formatCurrency(order.totalPrice)}</h3><p>Thank you!</p></div><script>window.print();setTimeout(window.close,1000);<\/script></body></html>`);
+    printWindow.document.close();
+  };
   
   // Image upload handler
   document.addEventListener('change', (e) => {
@@ -700,4 +875,3 @@
 </script>
 </body>
 </html>
-```
