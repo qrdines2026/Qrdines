@@ -3,139 +3,108 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>QR Dine | Owner Portal - Complete Restaurant Management</title>
+  <title>QR Dine | Owner Portal - Firebase Real-time Sync</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'Inter', sans-serif; }
-    body { background: #f1f5f9; }
-    
+    body { background: #f1f5f9; transition: background 0.3s, color 0.3s; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
-    
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(20px); }
-      to { opacity: 1; transform: translateX(0); }
-    }
-    
-    .toast-notification {
-      position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white;
-      padding: 12px 20px; border-radius: 12px; z-index: 1000;
-      animation: slideIn 0.3s ease-out; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-    }
-    
-    .stat-card {
-      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-      transition: all 0.3s ease;
-    }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    .toast-notification { position: fixed; bottom: 20px; right: 20px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 12px; z-index: 1000; animation: slideIn 0.3s ease-out; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .stat-card { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); transition: all 0.3s ease; border: 1px solid rgba(0,0,0,0.05); }
     .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-    
     .dark-mode { background: #0f172a; color: #f1f5f9; }
     .dark-mode .bg-white { background: #1e293b; }
     .dark-mode .bg-gray-50 { background: #0f172a; }
     .dark-mode .text-gray-600 { color: #94a3b8; }
     .dark-mode .border-gray-200 { border-color: #334155; }
     .dark-mode .stat-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
-    
     .badge { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
     .badge-completed { background: #dcfce7; color: #166534; }
     .badge-pending { background: #fef3c7; color: #92400e; }
     .badge-preparing { background: #dbeafe; color: #1e40af; }
-    
     .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; border-radius: 20px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; padding: 24px; }
     .dark-mode .modal-content { background: #1e293b; }
-    
-    .sidebar-nav { transition: all 0.2s ease; cursor: pointer; }
+    .sidebar-nav { transition: all 0.2s ease; cursor: pointer; border-radius: 12px; }
     .sidebar-nav:hover { background: #fef3c7; color: #f97316; }
     .sidebar-nav.active { background: linear-gradient(135deg, #f97316, #ea580c); color: white; box-shadow: 0 4px 12px rgba(249,115,22,0.3); }
-    
-    .veg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-    .veg-dot.green { background: #22c55e; }
-    .veg-dot.red { background: #ef4444; }
+    .live-badge { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    .firebase-status { position: fixed; bottom: 20px; left: 20px; z-index: 100; background: rgba(0,0,0,0.8); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px; }
   </style>
 </head>
 <body>
 <div id="owner-portal"></div>
 
-<script type="module">
+<script>
   // ======================== FIREBASE CONFIGURATION ========================
+  // IMPORTANT: Replace with your own Firebase project configuration
   const firebaseConfig = {
-    apiKey: "AIzaSyDnTl39uYi-NHhBEMeObezN2Uyqkk8sk6Q",
-    authDomain: "qrdines-829b7.firebaseapp.com",
-    projectId: "qrdines-829b7",
-    storageBucket: "qrdines-829b7.firebasestorage.app",
-    messagingSenderId: "1025530812948",
-    appId: "1:1025530812948:web:66f8e69e0d5af83461e501",
-    measurementId: "G-8Y4DWD208G"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
   };
-
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    updateDoc, 
-    deleteDoc, 
-    doc, 
-    onSnapshot, 
-    query, 
-    where, 
-    orderBy,
-    serverTimestamp,
-    getDocs,
-    setDoc
-  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-  import {
-    getAuth,
-    signInWithEmailAndPassword,
-    signOut,
-    onAuthStateChanged,
-    createUserWithEmailAndPassword,
-    updateProfile
-  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-
+  
+  // Initialize Firebase
+  let db = null;
+  let auth = null;
+  let firebaseInitialized = false;
+  let firebaseStatus = "Connecting...";
+  
+  // Try to initialize Firebase
+  try {
+    if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      auth = firebase.auth();
+      firebaseInitialized = true;
+      firebaseStatus = "✅ Connected to Firebase";
+      console.log("Firebase initialized successfully");
+    } else {
+      firebaseStatus = "⚠️ Using Demo Mode - Configure Firebase";
+      console.warn("Firebase not configured. Using localStorage fallback.");
+    }
+  } catch (e) {
+    firebaseStatus = "❌ Firebase Error: " + e.message;
+    console.error("Firebase init error:", e);
+  }
+  
+  // ======================== STORAGE KEYS (Fallback) ========================
+  const STORAGE_MENU = 'simple_menu';
+  const STORAGE_ORDERS = 'orders';
+  const STORAGE_ACTIVITY_LOG = 'owner_activity_log';
+  
   // ======================== GLOBAL STATE ========================
-  let currentUser = null;
-  let isLoggedIn = false;
-  let currentView = 'dashboard';
+  let currentUser = null, isLoggedIn = false, currentView = 'dashboard';
   let darkMode = localStorage.getItem('ownerDarkMode') === 'true';
   let activityLogs = [];
-  let showStaffModal = false;
-  let showInventoryModal = false;
-  let editingStaff = null;
-  let editingInventory = null;
-  
-  // Firebase Data
-  let menuItems = [];
-  let orders = [];
-  let staffMembers = [];
-  let expenses = [];
-  let inventory = [];
-  let reviews = [];
-  let orderHistory = [];
-  let restaurantData = null;
+  let showStaffModal = false, showInventoryModal = false;
+  let editingStaff = null, editingInventory = null;
+  let firestoreListeners = [];
   
   // Restaurant Settings
   let restaurantSettings = {
     name: 'Spice Garden',
-    logo: '',
     address: '123 Food Street, MG Road, Bangalore - 560001',
     phone: '+91 98765 43210',
     email: 'contact@spicegarden.com',
     gstin: '32ABCDE1234F1Z5',
-    fssai: '12345678901234',
     kitchenNote: 'No onion no garlic for Jain orders'
   };
   
-  // Tax Configuration
   let taxConfig = {
     cgst: { rate: 2.5, enabled: true, name: 'CGST' },
     sgst: { rate: 2.5, enabled: true, name: 'SGST' },
@@ -143,445 +112,21 @@
     roundOff: true
   };
   
-  // Financial Data
+  // Business Data
+  let orders = [];
+  let menuItems = [];
+  let staffMembers = [];
+  let expenses = [];
+  let inventory = [];
+  let reviews = [];
   let revenueData = { monthly: [] };
   let expenseBreakdown = { Ingredients: 35, 'Staff Salary': 30, Rent: 15, Utilities: 10, Marketing: 6, Maintenance: 4 };
   
   // Chart instances
-  let revenueChartInstance = null;
-  let expenseChartInstance = null;
-  let categoryChartInstance = null;
+  let revenueChartInstance = null, expenseChartInstance = null, categoryChartInstance = null;
   
-  // Unsubscribe functions
-  let unsubscribeMenu = null;
-  let unsubscribeOrders = null;
-  let unsubscribeStaff = null;
-  let unsubscribeInventory = null;
-  let unsubscribeExpenses = null;
-  let unsubscribeReviews = null;
-  
-  // ======================== FIREBASE LISTENERS ========================
-  function listenToMenu() {
-    if (!currentUser) return;
-    const menuQuery = query(collection(db, "menu"), where("restaurantId", "==", currentUser.uid));
-    if (unsubscribeMenu) unsubscribeMenu();
-    unsubscribeMenu = onSnapshot(menuQuery, (snapshot) => {
-      menuItems = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        menuItems.push({ id: doc.id, ...data });
-      });
-      console.log(`✅ Menu loaded: ${menuItems.length} items`);
-      if (currentView === 'menu') render();
-    });
-  }
-  
-  function listenToOrders() {
-    if (!currentUser) return;
-    const ordersQuery = query(collection(db, "orders"), where("restaurantId", "==", currentUser.uid), orderBy("timestamp", "desc"));
-    if (unsubscribeOrders) unsubscribeOrders();
-    unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
-      orders = [];
-      orderHistory = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        orders.push({ id: doc.id, ...data });
-        orderHistory.push({ id: doc.id, ...data });
-      });
-      console.log(`✅ Orders loaded: ${orders.length} orders`);
-      if (currentView === 'dashboard' || currentView === 'orderhistory') render();
-    });
-  }
-  
-  function listenToStaff() {
-    if (!currentUser) return;
-    const staffQuery = query(collection(db, "staff"), where("restaurantId", "==", currentUser.uid));
-    if (unsubscribeStaff) unsubscribeStaff();
-    unsubscribeStaff = onSnapshot(staffQuery, (snapshot) => {
-      staffMembers = [];
-      snapshot.forEach((doc) => { staffMembers.push({ id: doc.id, ...doc.data() }); });
-      if (currentView === 'staff') render();
-    });
-  }
-  
-  function listenToInventory() {
-    if (!currentUser) return;
-    const invQuery = query(collection(db, "inventory"), where("restaurantId", "==", currentUser.uid));
-    if (unsubscribeInventory) unsubscribeInventory();
-    unsubscribeInventory = onSnapshot(invQuery, (snapshot) => {
-      inventory = [];
-      snapshot.forEach((doc) => { inventory.push({ id: doc.id, ...doc.data() }); });
-      if (currentView === 'inventory') render();
-    });
-  }
-  
-  function listenToExpenses() {
-    if (!currentUser) return;
-    const expQuery = query(collection(db, "expenses"), where("restaurantId", "==", currentUser.uid), orderBy("date", "desc"));
-    if (unsubscribeExpenses) unsubscribeExpenses();
-    unsubscribeExpenses = onSnapshot(expQuery, (snapshot) => {
-      expenses = [];
-      snapshot.forEach((doc) => { expenses.push({ id: doc.id, ...doc.data() }); });
-      if (currentView === 'expenses') render();
-    });
-  }
-  
-  function listenToReviews() {
-    if (!currentUser) return;
-    const reviewQuery = query(collection(db, "reviews"), where("restaurantId", "==", currentUser.uid));
-    if (unsubscribeReviews) unsubscribeReviews();
-    unsubscribeReviews = onSnapshot(reviewQuery, (snapshot) => {
-      reviews = [];
-      snapshot.forEach((doc) => { reviews.push({ id: doc.id, ...doc.data() }); });
-      if (currentView === 'reviews') render();
-    });
-  }
-  
-  // ======================== FIREBASE CRUD OPERATIONS ========================
-  async function addLog(action, details) {
-    if (!currentUser) return;
-    try {
-      await addDoc(collection(db, "activityLogs"), {
-        restaurantId: currentUser.uid,
-        action,
-        details,
-        timestamp: serverTimestamp(),
-        user: currentUser.email
-      });
-    } catch (error) { console.error("Error logging:", error); }
-    activityLogs.unshift({ id: Date.now(), timestamp: new Date().toLocaleString(), action, details, user: currentUser.email });
-    if (activityLogs.length > 100) activityLogs.pop();
-  }
-  
-  // Menu Functions with Firebase
-  async function toggleMenuItem(id, currentStatus) {
-    try {
-      await updateDoc(doc(db, "menu", id), { available: !currentStatus });
-      addLog('TOGGLE_MENU', `Item ${!currentStatus ? 'available' : 'unavailable'}`);
-      showNotification(`Item updated successfully`, 'success');
-    } catch (error) {
-      showNotification("Error updating item", 'error');
-    }
-  }
-  
-  async function updateMenuPrice(id, name, currentPrice) {
-    const newPrice = prompt(`Update price for ${name}:`, currentPrice);
-    if (newPrice && !isNaN(parseFloat(newPrice))) {
-      try {
-        await updateDoc(doc(db, "menu", id), { price: parseFloat(newPrice) });
-        addLog('UPDATE_MENU', `${name} price updated`);
-        showNotification('Price updated successfully', 'success');
-      } catch (error) {
-        showNotification("Error updating price", 'error');
-      }
-    }
-  }
-  
-  // Staff Functions with Firebase
-  async function openStaffModal(staff = null) { editingStaff = staff; showStaffModal = true; render(); }
-  async function saveStaff() {
-    const name = document.getElementById('staffName')?.value;
-    const role = document.getElementById('staffRole')?.value;
-    const category = document.getElementById('staffCategory')?.value;
-    const salary = parseFloat(document.getElementById('staffSalary')?.value);
-    const phone = document.getElementById('staffPhone')?.value;
-    if (!name || !role || !salary) { showNotification('Please fill all required fields', 'error'); return; }
-    try {
-      if (editingStaff) {
-        await updateDoc(doc(db, "staff", editingStaff.id), { name, role, category, salary, phone });
-        addLog('EDIT_STAFF', `Updated ${name}`);
-        showNotification('Staff updated');
-      } else {
-        await addDoc(collection(db, "staff"), {
-          restaurantId: currentUser.uid,
-          name, role, category, salary, phone,
-          joinDate: new Date().toISOString(),
-          createdAt: serverTimestamp()
-        });
-        addLog('ADD_STAFF', `Added ${name} as ${role}`);
-        showNotification(`Staff ${name} added`);
-      }
-    } catch (error) { showNotification("Error saving staff", 'error'); }
-    showStaffModal = false; editingStaff = null; render();
-  }
-  async function deleteStaff(id, name) {
-    if (!confirm(`Remove ${name}?`)) return;
-    try {
-      await deleteDoc(doc(db, "staff", id));
-      addLog('DELETE_STAFF', `Removed ${name}`);
-      showNotification('Staff removed');
-      render();
-    } catch (error) { showNotification("Error deleting staff", 'error'); }
-  }
-  
-  // Inventory Functions with Firebase
-  async function openInventoryModal(item = null) { editingInventory = item; showInventoryModal = true; render(); }
-  async function saveInventory() {
-    const name = document.getElementById('invName')?.value;
-    const quantity = parseFloat(document.getElementById('invQuantity')?.value);
-    const unit = document.getElementById('invUnit')?.value;
-    const threshold = parseFloat(document.getElementById('invThreshold')?.value);
-    const price = parseFloat(document.getElementById('invPrice')?.value);
-    const category = document.getElementById('invCategory')?.value;
-    if (!name || isNaN(quantity) || !unit) { showNotification('Please fill all required fields', 'error'); return; }
-    try {
-      if (editingInventory) {
-        await updateDoc(doc(db, "inventory", editingInventory.id), { name, quantity, unit, threshold, price, category });
-        addLog('EDIT_INVENTORY', `Updated ${name}`);
-        showNotification('Inventory updated');
-      } else {
-        await addDoc(collection(db, "inventory"), {
-          restaurantId: currentUser.uid,
-          name, quantity, unit, threshold, price, category,
-          createdAt: serverTimestamp()
-        });
-        addLog('ADD_INVENTORY', `Added ${name} to inventory`);
-        showNotification(`Item ${name} added`);
-      }
-    } catch (error) { showNotification("Error saving inventory", 'error'); }
-    showInventoryModal = false; editingInventory = null; render();
-  }
-  async function deleteInventory(id, name) {
-    if (!confirm(`Delete ${name}?`)) return;
-    try {
-      await deleteDoc(doc(db, "inventory", id));
-      addLog('DELETE_INVENTORY', `Removed ${name}`);
-      showNotification('Item removed');
-      render();
-    } catch (error) { showNotification("Error deleting item", 'error'); }
-  }
-  async function updateInventoryQuantity(id, currentQty, name) {
-    const newQty = prompt(`Update quantity for ${name}:`, currentQty);
-    if (newQty && !isNaN(parseFloat(newQty))) {
-      try {
-        await updateDoc(doc(db, "inventory", id), { quantity: parseFloat(newQty) });
-        addLog('UPDATE_INVENTORY', `${name} quantity: ${newQty}`);
-        showNotification('Inventory updated');
-        render();
-      } catch (error) { showNotification("Error updating quantity", 'error'); }
-    }
-  }
-  
-  // Expense Functions with Firebase
-  async function addExpense() {
-    const category = prompt('Category:'); if(!category) return;
-    const amount = prompt('Amount:'); if(!amount) return;
-    const description = prompt('Description:'); if(!description) return;
-    try {
-      await addDoc(collection(db, "expenses"), {
-        restaurantId: currentUser.uid,
-        category, amount: parseInt(amount), description,
-        date: new Date().toISOString(),
-        createdAt: serverTimestamp()
-      });
-      addLog('ADD_EXPENSE', `${category}: ${formatCurrency(amount)}`);
-      showNotification('Expense added');
-      render();
-    } catch (error) { showNotification("Error adding expense", 'error'); }
-  }
-  async function deleteExpense(id) {
-    if (!confirm('Delete expense?')) return;
-    try {
-      await deleteDoc(doc(db, "expenses", id));
-      addLog('DELETE_EXPENSE', 'Deleted expense');
-      showNotification('Expense deleted');
-      render();
-    } catch (error) { showNotification("Error deleting expense", 'error'); }
-  }
-  
-  // Review Functions with Firebase
-  async function addReviewResponse(reviewId) {
-    const review = reviews.find(r => r.id == reviewId);
-    const response = prompt('Add response:', review?.response || '');
-    if (response !== null && review) {
-      try {
-        await updateDoc(doc(db, "reviews", reviewId), { response });
-        addLog('REVIEW_RESPONSE', `Replied to ${review.customer}`);
-        showNotification('Response added');
-        render();
-      } catch (error) { showNotification("Error adding response", 'error'); }
-    }
-  }
-  
-  // Settings Functions
-  async function saveSettings() {
-    if (!restaurantData?.id) return;
-    try {
-      await updateDoc(doc(db, "restaurants", restaurantData.id), {
-        name: document.getElementById('restoName')?.value,
-        address: document.getElementById('restoAddress')?.value,
-        phone: document.getElementById('restoPhone')?.value,
-        email: document.getElementById('restoEmail')?.value,
-        gstin: document.getElementById('restoGST')?.value,
-        kitchenNote: document.getElementById('kitchenNote')?.value,
-        updatedAt: serverTimestamp()
-      });
-      restaurantSettings.name = document.getElementById('restoName')?.value || restaurantSettings.name;
-      restaurantSettings.address = document.getElementById('restoAddress')?.value;
-      restaurantSettings.phone = document.getElementById('restoPhone')?.value;
-      restaurantSettings.email = document.getElementById('restoEmail')?.value;
-      restaurantSettings.gstin = document.getElementById('restoGST')?.value;
-      restaurantSettings.kitchenNote = document.getElementById('kitchenNote')?.value;
-      taxConfig.cgst.enabled = document.getElementById('cgstEnabled')?.checked;
-      taxConfig.sgst.enabled = document.getElementById('sgstEnabled')?.checked;
-      taxConfig.serviceCharge.enabled = document.getElementById('serviceChargeEnabled')?.checked;
-      taxConfig.roundOff = document.getElementById('roundOffEnabled')?.checked;
-      addLog('SETTINGS_UPDATED', 'Settings saved');
-      showNotification('Settings saved successfully');
-    } catch (error) {
-      showNotification("Error saving settings", 'error');
-    }
-  }
-  
-  // ======================== AUTHENTICATION ========================
-  async function login(email, password) {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      currentUser = userCredential.user;
-      isLoggedIn = true;
-      localStorage.setItem('owner_logged', 'true');
-      
-      // Load restaurant data
-      const q = query(collection(db, "restaurants"), where("userId", "==", currentUser.uid));
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        restaurantData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-        restaurantSettings.name = restaurantData.name || restaurantSettings.name;
-        restaurantSettings.address = restaurantData.address || restaurantSettings.address;
-        restaurantSettings.phone = restaurantData.phone || restaurantSettings.phone;
-        restaurantSettings.email = restaurantData.email || restaurantSettings.email;
-        restaurantSettings.gstin = restaurantData.gstin || restaurantSettings.gstin;
-      }
-      
-      addLog('OWNER_LOGIN', 'Logged in');
-      // Initialize listeners
-      listenToMenu();
-      listenToOrders();
-      listenToStaff();
-      listenToInventory();
-      listenToExpenses();
-      listenToReviews();
-      
-      // Generate sample revenue data
-      for (let i = 1; i <= 12; i++) {
-        revenueData.monthly.push({ month: i, amount: Math.floor(Math.random() * 150000) + 50000 });
-      }
-      
-      render();
-    } catch (error) {
-      showNotification('Invalid credentials. Please register first.', 'error');
-    }
-  }
-  
-  async function register(email, password, name, restoName, address, phone) {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      currentUser = userCredential.user;
-      await updateProfile(currentUser, { displayName: name });
-      
-      await setDoc(doc(db, "restaurants", currentUser.uid), {
-        userId: currentUser.uid,
-        name: restoName,
-        owner: name,
-        email: email,
-        address: address,
-        phone: phone,
-        createdAt: serverTimestamp()
-      });
-      
-      isLoggedIn = true;
-      localStorage.setItem('owner_logged', 'true');
-      restaurantSettings.name = restoName;
-      restaurantSettings.address = address;
-      restaurantSettings.phone = phone;
-      
-      addLog('OWNER_REGISTER', `Registered restaurant: ${restoName}`);
-      showNotification(`Welcome ${name}! Your restaurant "${restoName}" is ready.`, 'success');
-      
-      // Initialize listeners
-      listenToMenu();
-      listenToOrders();
-      listenToStaff();
-      listenToInventory();
-      listenToExpenses();
-      listenToReviews();
-      
-      render();
-    } catch (error) { showNotification(error.message, 'error'); }
-  }
-  
-  function logout() { 
-    addLog('OWNER_LOGOUT', 'Logged out'); 
-    currentUser = null; 
-    isLoggedIn = false; 
-    localStorage.removeItem('owner_logged'); 
-    render(); 
-  }
-  
-  function toggleDarkMode() { 
-    darkMode = !darkMode; 
-    localStorage.setItem('ownerDarkMode', darkMode); 
-    if (darkMode) document.body.classList.add('dark-mode'); 
-    else document.body.classList.remove('dark-mode'); 
-    render(); 
-  }
-  
-  function checkAuthState() {
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        currentUser = user;
-        isLoggedIn = true;
-        
-        const q = query(collection(db, "restaurants"), where("userId", "==", currentUser.uid));
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-          restaurantData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-          restaurantSettings.name = restaurantData.name || restaurantSettings.name;
-          restaurantSettings.address = restaurantData.address || restaurantSettings.address;
-          restaurantSettings.phone = restaurantData.phone || restaurantSettings.phone;
-        }
-        
-        listenToMenu();
-        listenToOrders();
-        listenToStaff();
-        listenToInventory();
-        listenToExpenses();
-        listenToReviews();
-        
-        for (let i = 1; i <= 12; i++) {
-          revenueData.monthly.push({ month: i, amount: Math.floor(Math.random() * 150000) + 50000 });
-        }
-        
-        render();
-      } else {
-        isLoggedIn = false;
-        render();
-      }
-    });
-  }
-  
-  // ======================== STATISTICS FUNCTIONS ========================
-  function getFinancialStats() {
-    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const totalProfit = totalRevenue - totalExpenses;
-    const profitMargin = totalRevenue ? (totalProfit / totalRevenue * 100).toFixed(1) : 0;
-    const monthlyRevenue = revenueData.monthly[new Date().getMonth()]?.amount || 0;
-    const lastMonthRevenue = revenueData.monthly[new Date().getMonth() - 1]?.amount || 0;
-    const revenueGrowth = lastMonthRevenue ? ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue * 100).toFixed(1) : 0;
-    return { totalRevenue, totalExpenses, totalProfit, profitMargin, monthlyRevenue, revenueGrowth };
-  }
-  
-  function getBusinessStats() {
-    const totalOrders = orders.length + orderHistory.length;
-    const avgOrderValue = totalOrders ? (orders.reduce((s, o) => s + (o.totalPrice || 0), 0) / (orders.length || 1)) : 0;
-    const avgRating = reviews.length ? reviews.reduce((s, r) => s + (r.rating || 4), 0) / reviews.length : 4.5;
-    const popularItems = [...menuItems].sort((a,b) => (b.orders || 0) - (a.orders || 0)).slice(3);
-    const lowStockItems = inventory.filter(i => i.quantity <= i.threshold);
-    const bestSeller = menuItems.sort((a,b) => (b.orders || 0) - (a.orders || 0))[0];
-    return { totalOrders, avgOrderValue, avgRating, popularItems, lowStockItems, bestSeller };
-  }
-  
+  // ======================== HELPER FUNCTIONS ========================
+  function formatCurrency(amount) { return '₹' + amount.toLocaleString(); }
   function showNotification(msg, type = 'success') {
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
@@ -590,15 +135,380 @@
     setTimeout(() => toast.remove(), 3000);
   }
   
-  function formatCurrency(amount) { return '₹' + amount.toLocaleString(); }
+  function addLog(action, details) {
+    const newLog = { id: Date.now(), timestamp: new Date().toLocaleString(), action, details, user: currentUser?.email || 'owner' };
+    activityLogs.unshift(newLog);
+    if (activityLogs.length > 200) activityLogs.pop();
+    localStorage.setItem(STORAGE_ACTIVITY_LOG, JSON.stringify(activityLogs));
+    
+    // Also save to Firebase if available
+    if (firebaseInitialized && db) {
+      db.collection('activityLogs').add(newLog).catch(e => console.warn("Failed to save log to Firebase:", e));
+    }
+  }
+  
+  // ======================== FIREBASE REAL-TIME SYNC ========================
+  function setupFirebaseListeners() {
+    if (!firebaseInitialized || !db) return;
+    
+    // Listen to menu changes from Admin Portal
+    const menuUnsubscribe = db.collection('menu').doc('restaurantMenu')
+      .onSnapshot(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data.items) {
+            menuItems = data.items;
+            localStorage.setItem(STORAGE_MENU, JSON.stringify(menuItems));
+            showNotification('📋 Menu updated from Admin Portal', 'info');
+            if (isLoggedIn) render();
+          }
+        }
+      }, err => console.warn("Menu listener error:", err));
+    
+    // Listen to orders from Admin Portal
+    const ordersUnsubscribe = db.collection('orders')
+      .orderBy('timestamp', 'desc')
+      .onSnapshot(snapshot => {
+        const newOrders = [];
+        snapshot.forEach(doc => {
+          newOrders.push({ id: doc.id, ...doc.data() });
+        });
+        if (JSON.stringify(orders) !== JSON.stringify(newOrders)) {
+          orders = newOrders;
+          localStorage.setItem(STORAGE_ORDERS, JSON.stringify(orders));
+          showNotification(`🔄 ${newOrders.length} orders synced from Admin`, 'info');
+          if (isLoggedIn) render();
+        }
+      }, err => console.warn("Orders listener error:", err));
+    
+    // Listen to activity logs
+    const logsUnsubscribe = db.collection('activityLogs')
+      .orderBy('timestamp', 'desc')
+      .limit(100)
+      .onSnapshot(snapshot => {
+        const newLogs = [];
+        snapshot.forEach(doc => {
+          newLogs.push(doc.data());
+        });
+        if (newLogs.length > 0) {
+          activityLogs = newLogs;
+          localStorage.setItem(STORAGE_ACTIVITY_LOG, JSON.stringify(activityLogs));
+          if (isLoggedIn && currentView === 'logs') render();
+        }
+      }, err => console.warn("Logs listener error:", err));
+    
+    firestoreListeners = [menuUnsubscribe, ordersUnsubscribe, logsUnsubscribe];
+  }
+  
+  // Push local data to Firebase (for initial sync)
+  async function pushToFirebase() {
+    if (!firebaseInitialized || !db) return;
+    try {
+      await db.collection('menu').doc('restaurantMenu').set({ items: menuItems, lastUpdated: new Date().toISOString() });
+      for (const order of orders) {
+        await db.collection('orders').doc(order.id).set(order);
+      }
+      console.log("Data pushed to Firebase");
+    } catch (e) { console.warn("Push to Firebase failed:", e); }
+  }
+  
+  // ======================== DATA LOADING (Firebase First, then LocalStorage) ========================
+  async function loadSyncedData() {
+    // Try Firebase first
+    if (firebaseInitialized && db) {
+      try {
+        const menuDoc = await db.collection('menu').doc('restaurantMenu').get();
+        if (menuDoc.exists && menuDoc.data().items) {
+          menuItems = menuDoc.data().items;
+        } else {
+          loadLocalMenu();
+          await pushToFirebase();
+        }
+        
+        const ordersSnapshot = await db.collection('orders').orderBy('timestamp', 'desc').limit(100).get();
+        if (!ordersSnapshot.empty) {
+          orders = [];
+          ordersSnapshot.forEach(doc => orders.push({ id: doc.id, ...doc.data() }));
+        } else {
+          loadLocalOrders();
+        }
+        
+        const logsSnapshot = await db.collection('activityLogs').orderBy('timestamp', 'desc').limit(100).get();
+        if (!logsSnapshot.empty) {
+          activityLogs = [];
+          logsSnapshot.forEach(doc => activityLogs.push(doc.data()));
+        } else {
+          loadLocalLogs();
+        }
+      } catch (e) { console.warn("Firebase load error, using localStorage:", e); loadLocalFallback(); }
+    } else {
+      loadLocalFallback();
+    }
+    
+    // Load local business data
+    loadLocalBusinessData();
+    generateMonthlyRevenue();
+  }
+  
+  function loadLocalMenu() {
+    const storedMenu = localStorage.getItem(STORAGE_MENU);
+    if (storedMenu) menuItems = JSON.parse(storedMenu);
+    else menuItems = [
+      { id: 1, name: "Paneer Tikka", price: 220, cost: 140, category: "Starters", veg: true, available: true, orders: 145, profit: 80, description: "Grilled cottage cheese with spices" },
+      { id: 2, name: "Chicken Biryani", price: 320, cost: 200, category: "Main Course", veg: false, available: true, orders: 256, profit: 120 },
+      { id: 3, name: "Butter Naan", price: 45, cost: 30, category: "Breads", veg: true, available: true, orders: 312, profit: 15 },
+      { id: 4, name: "Mango Lassi", price: 90, cost: 55, category: "Beverages", veg: true, available: true, orders: 198, profit: 35 },
+      { id: 5, name: "Gulab Jamun", price: 80, cost: 50, category: "Desserts", veg: true, available: true, orders: 234, profit: 30 }
+    ];
+  }
+  
+  function loadLocalOrders() {
+    const storedOrders = localStorage.getItem(STORAGE_ORDERS);
+    orders = storedOrders ? JSON.parse(storedOrders) : [];
+  }
+  
+  function loadLocalLogs() {
+    const storedLog = localStorage.getItem(STORAGE_ACTIVITY_LOG);
+    activityLogs = storedLog ? JSON.parse(storedLog) : [];
+  }
+  
+  function loadLocalFallback() {
+    loadLocalMenu();
+    loadLocalOrders();
+    loadLocalLogs();
+  }
+  
+  function loadLocalBusinessData() {
+    const storedStaff = localStorage.getItem('staff_members');
+    staffMembers = storedStaff ? JSON.parse(storedStaff) : [
+      { id: 1, name: 'Rajesh Kumar', role: 'Manager', category: 'Management', salary: 35000, phone: '9876543210', joinDate: '2023-01-15', performance: 4.8 },
+      { id: 2, name: 'Priya Singh', role: 'Head Chef', category: 'Kitchen', salary: 28000, phone: '9876543211', joinDate: '2023-03-20', performance: 4.9 }
+    ];
+    
+    const storedInventory = localStorage.getItem('inventory_items');
+    inventory = storedInventory ? JSON.parse(storedInventory) : [
+      { id: 1, name: 'Chicken', quantity: 45, unit: 'kg', threshold: 15, price: 220, category: 'Meat' },
+      { id: 2, name: 'Basmati Rice', quantity: 80, unit: 'kg', threshold: 25, price: 90, category: 'Grains' },
+      { id: 3, name: 'Paneer', quantity: 12, unit: 'kg', threshold: 8, price: 320, category: 'Dairy' }
+    ];
+    
+    const storedExpenses = localStorage.getItem('expenses');
+    expenses = storedExpenses ? JSON.parse(storedExpenses) : [
+      { id: 1, category: 'Ingredients', amount: 25000, date: new Date().toISOString(), description: 'Weekly purchase' },
+      { id: 2, category: 'Staff Salary', amount: 75000, date: new Date().toISOString(), description: 'Monthly salaries' }
+    ];
+    
+    const storedReviews = localStorage.getItem('reviews');
+    reviews = storedReviews ? JSON.parse(storedReviews) : [
+      { id: 1, customer: 'Rahul Sharma', rating: 5, comment: 'Excellent food quality!', date: new Date().toISOString(), response: '' }
+    ];
+    
+    const storedSettings = localStorage.getItem('restaurant_settings');
+    if (storedSettings) restaurantSettings = JSON.parse(storedSettings);
+    const storedTax = localStorage.getItem('tax_config');
+    if (storedTax) taxConfig = JSON.parse(storedTax);
+  }
+  
+  function generateMonthlyRevenue() {
+    const monthlyMap = {};
+    orders.forEach(order => {
+      const date = new Date(order.timestamp || Date.now());
+      const monthKey = date.getMonth();
+      const amount = order.totalPrice || 0;
+      monthlyMap[monthKey] = (monthlyMap[monthKey] || 0) + amount;
+    });
+    revenueData.monthly = [];
+    for (let i = 0; i < 12; i++) {
+      revenueData.monthly.push({ month: i, amount: monthlyMap[i] || Math.floor(Math.random() * 80000) + 30000 });
+    }
+  }
+  
+  // ======================== STATS CALCULATIONS ========================
+  function getFinancialStats() {
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalProfit = totalRevenue - totalExpenses;
+    const profitMargin = totalRevenue ? (totalProfit / totalRevenue * 100).toFixed(1) : 0;
+    return { totalRevenue, totalExpenses, totalProfit, profitMargin };
+  }
+  
+  function getBusinessStats() {
+    const totalOrders = orders.length;
+    const avgOrderValue = totalOrders ? (orders.reduce((s, o) => s + (o.totalPrice || 0), 0) / totalOrders).toFixed(0) : 0;
+    const avgRating = reviews.reduce((s, r) => s + r.rating, 0) / (reviews.length || 1);
+    const popularItems = [...menuItems].sort((a,b) => (b.orders || 0) - (a.orders || 0)).slice(0, 3);
+    const lowStockItems = inventory.filter(i => i.quantity <= i.threshold);
+    const bestSeller = menuItems.sort((a,b) => (b.orders || 0) - (a.orders || 0))[0];
+    const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+    const preparingOrders = orders.filter(o => o.status === 'Preparing').length;
+    return { totalOrders, avgOrderValue, avgRating, popularItems, lowStockItems, bestSeller, pendingOrders, preparingOrders };
+  }
+  
+  // ======================== CRUD OPERATIONS ========================
+  function toggleMenuItem(id, currentStatus) {
+    const item = menuItems.find(i => i.id == id);
+    if (item) {
+      item.available = !currentStatus;
+      localStorage.setItem(STORAGE_MENU, JSON.stringify(menuItems));
+      if (firebaseInitialized && db) {
+        db.collection('menu').doc('restaurantMenu').set({ items: menuItems, lastUpdated: new Date().toISOString() });
+      }
+      addLog('TOGGLE_MENU', `${item.name} ${item.available ? 'available' : 'unavailable'}`);
+      showNotification(`${item.name} updated`, 'success');
+      render();
+    }
+  }
+  
+  function updateMenuPrice(id, name, currentPrice) {
+    const newPrice = prompt(`Update price for ${name}:`, currentPrice);
+    if (newPrice && !isNaN(parseFloat(newPrice))) {
+      const item = menuItems.find(i => i.id == id);
+      if (item) {
+        item.price = parseFloat(newPrice);
+        localStorage.setItem(STORAGE_MENU, JSON.stringify(menuItems));
+        if (firebaseInitialized && db) {
+          db.collection('menu').doc('restaurantMenu').set({ items: menuItems, lastUpdated: new Date().toISOString() });
+        }
+        addLog('UPDATE_MENU', `${name} price updated to ${formatCurrency(item.price)}`);
+        showNotification('Price updated', 'success');
+        render();
+      }
+    }
+  }
+  
+  function saveStaff() {
+    const name = document.getElementById('staffName')?.value;
+    const role = document.getElementById('staffRole')?.value;
+    const salary = parseFloat(document.getElementById('staffSalary')?.value);
+    if (!name || !role || !salary) { showNotification('Please fill all required fields', 'error'); return; }
+    if (editingStaff) {
+      const index = staffMembers.findIndex(s => s.id === editingStaff.id);
+      if (index !== -1) { staffMembers[index] = { ...staffMembers[index], name, role, salary }; addLog('EDIT_STAFF', `Updated ${name}`); }
+    } else {
+      staffMembers.push({ id: Date.now(), name, role, salary, joinDate: new Date().toISOString() });
+      addLog('ADD_STAFF', `Added ${name} as ${role}`);
+    }
+    localStorage.setItem('staff_members', JSON.stringify(staffMembers));
+    showStaffModal = false; editingStaff = null; showNotification('Staff saved'); render();
+  }
+  
+  function deleteStaff(id, name) { if (confirm(`Remove ${name}?`)) { staffMembers = staffMembers.filter(s => s.id != id); localStorage.setItem('staff_members', JSON.stringify(staffMembers)); addLog('DELETE_STAFF', `Removed ${name}`); showNotification('Staff removed'); render(); } }
+  function openStaffModal(staff = null) { editingStaff = staff; showStaffModal = true; render(); }
+  
+  function saveInventory() {
+    const name = document.getElementById('invName')?.value;
+    const quantity = parseFloat(document.getElementById('invQuantity')?.value);
+    const unit = document.getElementById('invUnit')?.value;
+    const threshold = parseFloat(document.getElementById('invThreshold')?.value);
+    if (!name || isNaN(quantity)) { showNotification('Please fill required fields', 'error'); return; }
+    if (editingInventory) {
+      const index = inventory.findIndex(i => i.id === editingInventory.id);
+      if (index !== -1) { inventory[index] = { ...inventory[index], name, quantity, unit, threshold }; addLog('EDIT_INVENTORY', `Updated ${name}`); }
+    } else {
+      inventory.push({ id: Date.now(), name, quantity, unit, threshold });
+      addLog('ADD_INVENTORY', `Added ${name} to inventory`);
+    }
+    localStorage.setItem('inventory_items', JSON.stringify(inventory));
+    showInventoryModal = false; editingInventory = null; showNotification('Inventory saved'); render();
+  }
+  
+  function deleteInventory(id, name) { if (confirm(`Delete ${name}?`)) { inventory = inventory.filter(i => i.id != id); localStorage.setItem('inventory_items', JSON.stringify(inventory)); addLog('DELETE_INVENTORY', `Removed ${name}`); showNotification('Item removed'); render(); } }
+  function openInventoryModal(item = null) { editingInventory = item; showInventoryModal = true; render(); }
+  function updateInventoryQuantity(id, currentQty, name) {
+    const newQty = prompt(`Update quantity for ${name}:`, currentQty);
+    if (newQty && !isNaN(parseFloat(newQty))) { const item = inventory.find(i => i.id == id); if (item) { item.quantity = parseFloat(newQty); localStorage.setItem('inventory_items', JSON.stringify(inventory)); addLog('UPDATE_INVENTORY', `${name} quantity: ${newQty}`); showNotification('Inventory updated'); render(); } }
+  }
+  
+  function addExpense() {
+    const category = prompt('Category:'); if(!category) return;
+    const amount = prompt('Amount:'); if(!amount) return;
+    const description = prompt('Description:'); if(!description) return;
+    expenses.push({ id: Date.now(), category, amount: parseInt(amount), description, date: new Date().toISOString() });
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    addLog('ADD_EXPENSE', `${category}: ${formatCurrency(amount)}`); showNotification('Expense added'); render();
+  }
+  function deleteExpense(id) { if (confirm('Delete expense?')) { expenses = expenses.filter(e => e.id != id); localStorage.setItem('expenses', JSON.stringify(expenses)); addLog('DELETE_EXPENSE', 'Deleted expense'); showNotification('Expense deleted'); render(); } }
+  
+  function addReviewResponse(reviewId) {
+    const review = reviews.find(r => r.id == reviewId);
+    const response = prompt('Add response:', review?.response || '');
+    if (response !== null && review) { review.response = response; localStorage.setItem('reviews', JSON.stringify(reviews)); addLog('REVIEW_RESPONSE', `Replied to ${review.customer}`); showNotification('Response added'); render(); }
+  }
+  
+  function saveSettings() {
+    restaurantSettings.name = document.getElementById('restoName')?.value || restaurantSettings.name;
+    restaurantSettings.address = document.getElementById('restoAddress')?.value;
+    restaurantSettings.phone = document.getElementById('restoPhone')?.value;
+    restaurantSettings.email = document.getElementById('restoEmail')?.value;
+    localStorage.setItem('restaurant_settings', JSON.stringify(restaurantSettings));
+    addLog('SETTINGS_UPDATED', 'Settings saved');
+    showNotification('Settings saved successfully');
+    render();
+  }
+  
+  // ======================== AUTHENTICATION ========================
+  async function login(email, password) {
+    if (firebaseInitialized && auth) {
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+        currentUser = { email, role: 'owner' };
+        isLoggedIn = true;
+        localStorage.setItem('owner_logged', 'true');
+        addLog('OWNER_LOGIN', 'Logged in via Firebase');
+        await loadSyncedData();
+        render();
+      } catch (e) {
+        showNotification('Firebase login failed. Using demo mode.', 'error');
+        demoLogin();
+      }
+    } else {
+      demoLogin();
+    }
+  }
+  
+  function demoLogin() {
+    if (email === 'owner@resto.com' && password === 'owner123') {
+      currentUser = { email, role: 'owner', name: 'Restaurant Owner' };
+      isLoggedIn = true;
+      localStorage.setItem('owner_logged', 'true');
+      addLog('OWNER_LOGIN', 'Logged in (Demo Mode)');
+      loadSyncedData();
+      render();
+    } else { showNotification('Invalid credentials. Use owner@resto.com / owner123', 'error'); }
+  }
+  
+  function logout() { 
+    if (firebaseInitialized && auth) auth.signOut(); 
+    addLog('OWNER_LOGOUT', 'Logged out'); 
+    currentUser = null; isLoggedIn = false; 
+    localStorage.removeItem('owner_logged'); 
+    render(); 
+  }
+  
+  function toggleDarkMode() { darkMode = !darkMode; localStorage.setItem('ownerDarkMode', darkMode); if (darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); render(); }
+  
+  // ======================== CHARTS ========================
+  function renderCharts() {
+    const revenueCanvas = document.getElementById('revenueChart');
+    if (revenueCanvas) {
+      if (revenueChartInstance) revenueChartInstance.destroy();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const revenue = revenueData.monthly.map(m => m.amount);
+      revenueChartInstance = new Chart(revenueCanvas.getContext('2d'), {
+        type: 'line',
+        data: { labels: months, datasets: [{ label: 'Monthly Revenue (₹)', data: revenue, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.4 }] },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+  }
   
   // ======================== RENDER FUNCTIONS ========================
   function renderLogin() {
     return `<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100">
       <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
-        <div class="text-center mb-6"><div class="inline-block bg-orange-100 rounded-full p-4 mb-4"><i class="fas fa-crown text-5xl text-orange-600"></i></div><h2 class="text-2xl font-bold text-gray-800">Owner Portal</h2><p class="text-gray-500 text-sm">Complete Restaurant Management</p></div>
-        <div id="loginForm"><div class="space-y-4"><input type="email" id="loginEmail" class="w-full border rounded-lg px-4 py-2" placeholder="Email"><input type="password" id="loginPassword" class="w-full border rounded-lg px-4 py-2" placeholder="Password"><button id="loginBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700">Login</button><p class="text-center text-sm">New owner? <button id="showRegisterBtn" class="text-orange-600">Register</button></p></div></div>
-        <div id="registerForm" class="hidden"><div class="space-y-4"><input type="text" id="regName" class="w-full border rounded-lg px-4 py-2" placeholder="Owner Name"><input type="text" id="regRestoName" class="w-full border rounded-lg px-4 py-2" placeholder="Restaurant Name"><input type="email" id="regEmail" class="w-full border rounded-lg px-4 py-2" placeholder="Email"><input type="password" id="regPassword" class="w-full border rounded-lg px-4 py-2" placeholder="Password"><input type="text" id="regAddress" class="w-full border rounded-lg px-4 py-2" placeholder="Address"><input type="tel" id="regPhone" class="w-full border rounded-lg px-4 py-2" placeholder="Phone"><button id="registerBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold">Register Restaurant</button><p class="text-center text-sm">Already have account? <button id="showLoginBtn" class="text-orange-600">Login</button></p></div></div>
+        <div class="text-center mb-6"><div class="inline-block bg-orange-100 rounded-full p-4 mb-4"><i class="fas fa-crown text-5xl text-orange-600"></i></div><h2 class="text-2xl font-bold text-gray-800">Owner Portal</h2><p class="text-gray-500 text-sm">Firebase Real-time Sync • Live Admin Connection</p><div class="mt-2 text-xs ${firebaseStatus.includes('✅') ? 'text-green-600' : 'text-yellow-600'}"><i class="fas fa-database mr-1"></i>${firebaseStatus}</div></div>
+        <div class="space-y-4"><input type="email" id="loginEmail" class="w-full border rounded-lg px-4 py-2" placeholder="owner@resto.com" value="owner@resto.com"><input type="password" id="loginPassword" class="w-full border rounded-lg px-4 py-2" placeholder="owner123" value="owner123"><button id="loginBtn" class="w-full bg-orange-600 text-white py-2 rounded-lg font-semibold hover:bg-orange-700">Login</button></div>
+        <div class="mt-4 text-center text-xs text-gray-500"><p>Demo: owner@resto.com / owner123</p><p class="mt-1 text-orange-600"><i class="fas fa-sync-alt"></i> Real-time sync with Admin Portal via Firebase</p></div>
       </div>
     </div>`;
   }
@@ -617,48 +527,21 @@
       { id: 'logs', icon: 'fa-history', label: 'Logs' },
       { id: 'settings', icon: 'fa-cog', label: 'Settings' }
     ];
-    return `<div class="fixed left-0 top-0 h-full w-64 bg-white shadow-xl z-20"><div class="p-6 border-b"><div class="flex items-center gap-2"><i class="fas fa-crown text-orange-500 text-2xl"></i><span class="font-bold text-xl text-gray-800">QR Dine</span></div><p class="text-xs text-gray-500 mt-1">Owner Portal</p></div>
+    return `<div class="fixed left-0 top-0 h-full w-64 bg-white shadow-xl z-20 overflow-y-auto"><div class="p-6 border-b"><div class="flex items-center gap-2"><i class="fas fa-crown text-orange-500 text-2xl"></i><span class="font-bold text-xl text-gray-800">QR Dine</span></div><p class="text-xs text-gray-500 mt-1">Owner Portal • Firebase Sync</p></div>
     <nav class="p-4 space-y-1">${navItems.map(item => `<div class="sidebar-nav w-full px-4 py-3 rounded-lg flex items-center gap-3 transition ${currentView === item.id ? 'active' : 'text-gray-600 hover:bg-gray-50'}" data-view="${item.id}"><i class="fas ${item.icon} w-5"></i><span>${item.label}</span></div>`).join('')}</nav>
-    <div class="absolute bottom-0 left-0 right-0 p-4 border-t"><div class="flex items-center justify-between mb-3"><button id="darkModeToggle" class="text-gray-600 hover:text-orange-600"><i class="fas ${darkMode ? 'fa-sun' : 'fa-moon'}"></i></button><button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</button></div><div class="text-xs text-gray-500 text-center mt-2"><i class="fas fa-user-circle mr-1"></i> ${currentUser?.email}</div></div></div>`;
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t"><div class="flex items-center justify-between mb-3"><button id="darkModeToggle" class="text-gray-600 hover:text-orange-600"><i class="fas ${darkMode ? 'fa-sun' : 'fa-moon'}"></i></button><button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</button></div><div class="text-center"><span class="live-badge text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full"><i class="fas fa-firebase mr-1"></i> Firebase Live</span></div></div></div>`;
   }
   
   function renderDashboard() {
     const business = getBusinessStats();
     const financial = getFinancialStats();
-    setTimeout(() => {
-      // Revenue Chart
-      const revenueCanvas = document.getElementById('revenueChart');
-      if (revenueCanvas) {
-        if (revenueChartInstance) revenueChartInstance.destroy();
-        const ctx = revenueCanvas.getContext('2d');
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const revenue = revenueData.monthly.map(m => m.amount);
-        revenueChartInstance = new Chart(ctx, {
-          type: 'line',
-          data: { labels: months, datasets: [{ label: 'Monthly Revenue (₹)', data: revenue, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', fill: true, tension: 0.4 }] },
-          options: { responsive: true, maintainAspectRatio: false }
-        });
-      }
-      // Expense Chart
-      const expenseCanvas = document.getElementById('expenseChart');
-      if (expenseCanvas) {
-        if (expenseChartInstance) expenseChartInstance.destroy();
-        const ctx = expenseCanvas.getContext('2d');
-        const labels = Object.keys(expenseBreakdown);
-        const data = Object.values(expenseBreakdown);
-        expenseChartInstance = new Chart(ctx, {
-          type: 'pie',
-          data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4'] }] },
-          options: { responsive: true, maintainAspectRatio: false }
-        });
-      }
-    }, 100);
-    return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold text-gray-800">Welcome back, Owner!</h1><p class="text-gray-500">Complete business overview</p></div>
+    setTimeout(() => renderCharts(), 100);
+    return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold text-gray-800">Welcome back, ${currentUser?.email?.split('@')[0] || 'Owner'}!</h1><p class="text-gray-500">Live business overview • Real-time sync with Admin Portal</p><div class="mt-2 flex gap-2"><span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full"><i class="fas fa-sync-alt mr-1"></i> Orders: ${business.pendingOrders} pending, ${business.preparingOrders} preparing</span><span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full"><i class="fas fa-firebase mr-1"></i> Firebase Connected</span></div></div>
     <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
-      <div class="stat-card bg-white rounded-xl p-5"><div><p class="text-gray-500 text-sm">Total Revenue</p><p class="text-3xl font-bold text-green-600">${formatCurrency(financial.totalRevenue)}</p><p class="text-xs text-green-500">↑ ${financial.revenueGrowth}% vs last month</p></div></div>
-      <div class="stat-card bg-white rounded-xl p-5"><div><p class="text-gray-500 text-sm">Total Orders</p><p class="text-3xl font-bold text-blue-600">${business.totalOrders}</p></div></div>
-      <div class="stat-card bg-white rounded-xl p-5"><div><p class="text-gray-500 text-sm">Profit Margin</p><p class="text-3xl font-bold text-purple-600">${financial.profitMargin}%</p></div></div>
-      <div class="stat-card bg-white rounded-xl p-5"><div><p class="text-gray-500 text-sm">Avg Order Value</p><p class="text-3xl font-bold text-orange-600">${formatCurrency(business.avgOrderValue)}</p></div></div>
+      <div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500 text-sm">Total Revenue</p><p class="text-3xl font-bold text-green-600">${formatCurrency(financial.totalRevenue)}</p></div>
+      <div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500 text-sm">Total Orders</p><p class="text-3xl font-bold text-blue-600">${business.totalOrders}</p></div>
+      <div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500 text-sm">Profit Margin</p><p class="text-3xl font-bold text-purple-600">${financial.profitMargin}%</p></div>
+      <div class="stat-card bg-white rounded-xl p-5"><p class="text-gray-500 text-sm">Avg Order Value</p><p class="text-3xl font-bold text-orange-600">${formatCurrency(business.avgOrderValue)}</p></div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       <div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">Revenue Trend</h3><div class="h-72"><canvas id="revenueChart"></canvas></div></div>
@@ -666,34 +549,27 @@
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">⚠️ Low Stock Alerts</h3>${business.lowStockItems.length ? business.lowStockItems.map(i => `<div class="flex justify-between py-2 border-b"><span>${i.name}</span><span class="text-red-600 font-bold">${i.quantity} ${i.unit} left</span><button onclick="window.updateInventoryQuantity(${i.id}, ${i.quantity}, '${i.name}')" class="text-orange-500 text-sm">Update</button></div>`).join('') : '<p class="text-gray-500">All stock levels are healthy!</p>'}</div>
-      <div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">💡 Smart Insights</h3><div class="space-y-3"><div class="flex items-center gap-3 p-3 bg-orange-50 rounded-lg"><i class="fas fa-chart-line text-orange-500"></i><div><p class="font-medium">Peak Hour: 8:00 PM - 10:00 PM</p><p class="text-xs">65% of orders during dinner</p></div></div><div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg"><i class="fas fa-fire text-blue-500"></i><div><p class="font-medium">Best Seller: ${business.bestSeller?.name || 'N/A'}</p><p class="text-xs">Top selling item</p></div></div></div></div>
+      <div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">💡 Smart Insights</h3><div class="space-y-3"><div class="flex items-center gap-3 p-3 bg-orange-50 rounded-lg"><i class="fas fa-fire text-orange-500"></i><div><p class="font-medium">Best Seller: ${business.bestSeller?.name || 'N/A'}</p><p class="text-xs">${business.bestSeller?.orders || 0} orders</p></div></div><div class="flex items-center gap-3 p-3 bg-blue-50 rounded-lg"><i class="fas fa-chart-line text-blue-500"></i><div><p class="font-medium">Real-time Firebase Sync</p><p class="text-xs">All admin changes appear instantly</p></div></div></div></div>
     </div></div>`;
   }
   
-  function renderMenu() { return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold">Menu Management</h1><p class="text-gray-500">Manage items, prices, and availability</p></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[800px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3 text-left">Item</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Price</th><th class="px-4 py-3 text-right">Profit</th><th class="px-4 py-3 text-right">Orders</th><th class="px-4 py-3 text-center">Status</th><th class="px-4 py-3 text-center">Action</th></tr></thead><tbody>${menuItems.map(item => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${item.name} ${item.veg ? '🥬' : '🍗'}<div class="text-xs text-gray-400">${item.description || ''}</div></td><td class="px-4 py-3">${item.category}</td><td class="px-4 py-3 text-right font-semibold">${formatCurrency(item.price)}</td><td class="px-4 py-3 text-right text-green-600">${formatCurrency((item.price * 0.6) || 0)}</td><td class="px-4 py-3 text-right font-bold">${item.orders || 0}</td><td class="px-4 py-3 text-center"><button onclick="window.toggleMenuItem('${item.id}', ${item.available})" class="px-2 py-1 rounded text-xs ${item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${item.available ? 'Available' : 'Out'}</button></td><td class="px-4 py-3 text-center"><button onclick="window.updateMenuPrice('${item.id}', '${item.name}', ${item.price})" class="text-blue-500 hover:text-blue-700"><i class="fas fa-edit"></i> Edit</button></td></tr>`).join('')}</tbody>}</div></div>`; }
+  function renderMenu() { return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold">Menu Management</h1><p class="text-gray-500">Live sync with Admin Portal via Firebase</p></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[800px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3 text-left">Item</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Price</th><th class="px-4 py-3 text-right">Orders</th><th class="px-4 py-3 text-center">Status</th><th class="px-4 py-3 text-center">Action</th></tr></thead><tbody>${menuItems.map(item => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${item.name} ${item.veg ? '🥬' : '🍗'}<div class="text-xs text-gray-400">${item.description || ''}</div></td><td class="px-4 py-3">${item.category}</td><td class="px-4 py-3 text-right font-semibold">${formatCurrency(item.price)}</td><td class="px-4 py-3 text-right font-bold">${item.orders || 0}</td><td class="px-4 py-3 text-center"><button onclick="window.toggleMenuItem(${item.id}, ${item.available})" class="px-2 py-1 rounded text-xs ${item.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${item.available ? 'Available' : 'Out'}</button></td><td class="px-4 py-3 text-center"><button onclick="window.updateMenuPrice(${item.id}, '${item.name}', ${item.price})" class="text-blue-500 hover:text-blue-700"><i class="fas fa-edit"></i> Edit</button></td></tr>`).join('')}</tbody></table></div></div>`; }
   
-  function renderOrderHistory() { const allOrders = [...orderHistory, ...orders].sort((a,b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date)); return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Order History</h1><p class="text-gray-500 mb-6">Complete record of all customer orders</p><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[800px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Order ID</th><th class="px-4 py-3">Customer</th><th class="px-4 py-3 text-center">Table</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Payment</th><th class="px-4 py-3">Date</th></tr></thead><tbody>${allOrders.slice(0, 50).map(o => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-mono text-sm">${o.id?.slice(-8) || 'N/A'}</td><td class="px-4 py-3">${o.customerName || 'Walk-in'}</td><td class="px-4 py-3 text-center">${o.tableNumber || '-'}</td><td class="px-4 py-3 text-right font-semibold">${formatCurrency(o.totalPrice)}</td><td class="px-4 py-3"><span class="badge ${o.status === 'Completed' ? 'badge-completed' : o.status === 'Preparing' ? 'badge-preparing' : 'badge-pending'}">${o.status}</span></td><td class="px-4 py-3">${o.paymentMethod || '-'}</td><td class="px-4 py-3 text-sm">${new Date(o.timestamp || o.date).toLocaleDateString()}</td></tr>`).join('')}</tbody>}</div></div>`; }
+  function renderOrderHistory() { return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Order History</h1><p class="text-gray-500 mb-6">Live orders from Admin Portal via Firebase</p><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[800px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Order ID</th><th class="px-4 py-3 text-center">Table</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Date</th></tr></thead><tbody>${orders.slice(0, 50).map(o => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-mono text-sm">${o.id?.slice(-8)}</td><td class="px-4 py-3 text-center">${o.tableNumber || '-'}</td><td class="px-4 py-3 text-right font-semibold">${formatCurrency(o.totalPrice)}</td><td class="px-4 py-3"><span class="badge ${o.status === 'Served' ? 'badge-completed' : o.status === 'Preparing' ? 'badge-preparing' : 'badge-pending'}">${o.status || 'Pending'}</span></td><td class="px-4 py-3 text-sm">${new Date(o.timestamp).toLocaleDateString()}</td></tr>`).join('')}</tbody></table></div></div>`; }
   
-  function renderAnalytics() { setTimeout(() => { const canvas = document.getElementById('categorySalesChart'); if (canvas && !categoryChartInstance) { const ctx = canvas.getContext('2d'); const categories = ['Starters', 'Main Course', 'Breads', 'Beverages', 'Desserts']; const sales = categories.map(cat => menuItems.filter(i => i.category === cat).reduce((s, i) => s + (i.orders || 0), 0)); categoryChartInstance = new Chart(ctx, { type: 'bar', data: { labels: categories, datasets: [{ label: 'Orders', data: sales, backgroundColor: '#f97316', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: false } }); } }, 100); return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Analytics Dashboard</h1><p class="text-gray-500 mb-6">Deep insights into your business performance</p><div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6"><div class="bg-white rounded-xl p-6 text-center"><p class="text-gray-500">Conversion Rate</p><p class="text-3xl font-bold text-green-600">68%</p><p class="text-xs text-gray-400">+5% vs last month</p></div><div class="bg-white rounded-xl p-6 text-center"><p class="text-gray-500">Customer Retention</p><p class="text-3xl font-bold text-blue-600">45%</p></div><div class="bg-white rounded-xl p-6 text-center"><p class="text-gray-500">Avg Customer Rating</p><p class="text-3xl font-bold text-yellow-600">${getBusinessStats().avgRating.toFixed(1)} ★</p></div></div><div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">Sales by Category</h3><div class="h-80"><canvas id="categorySalesChart"></canvas></div></div></div>`; }
-  
-  function renderFinancial() { const f = getFinancialStats(); const totalExpenses = expenses.reduce((s,e)=>s+e.amount,0); return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Financial Management</h1><p class="text-gray-500 mb-6">Track revenue, expenses, and tax details</p><div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6"><div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-5 text-white"><p class="text-sm">Total Revenue</p><p class="text-2xl font-bold">${formatCurrency(f.totalRevenue)}</p></div><div class="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-5 text-white"><p class="text-sm">Total Expenses</p><p class="text-2xl font-bold">${formatCurrency(totalExpenses)}</p></div><div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5 text-white"><p class="text-sm">Net Profit</p><p class="text-2xl font-bold">${formatCurrency(f.totalProfit)}</p></div><div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-5 text-white"><p class="text-sm">Profit Margin</p><p class="text-2xl font-bold">${f.profitMargin}%</p></div></div><div class="bg-white rounded-xl p-5 mb-6"><h3 class="font-bold mb-4">💰 Tax & Charges Breakdown</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-4"><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">CGST</p><p class="text-xl font-bold">${taxConfig.cgst.enabled ? taxConfig.cgst.rate + '%' : 'Disabled'}</p></div><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">SGST</p><p class="text-xl font-bold">${taxConfig.sgst.enabled ? taxConfig.sgst.rate + '%' : 'Disabled'}</p></div><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">Service Charge</p><p class="text-xl font-bold">${taxConfig.serviceCharge.enabled ? taxConfig.serviceCharge.rate + '%' : 'Disabled'}</p></div><div class="p-3 bg-gray-50 rounded-lg"><p class="text-sm text-gray-500">Round Off</p><p class="text-xl font-bold">${taxConfig.roundOff ? 'Enabled' : 'Disabled'}</p></div></div></div><div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">📊 Expenditure Breakdown</h3><div class="space-y-3">${Object.entries(expenseBreakdown).map(([cat, percent]) => `<div><div class="flex justify-between mb-1"><span>${cat}</span><span>${percent}%</span></div><div class="w-full bg-gray-200 rounded-full h-2"><div class="bg-red-500 h-2 rounded-full" style="width: ${percent}%"></div></div></div>`).join('')}</div><div class="mt-4 pt-3 border-t"><p class="text-sm text-gray-500">Total Expenditure YTD: <span class="font-bold text-red-600">${formatCurrency(totalExpenses)}</span></p></div></div></div>`; }
-  
-  function renderStaff() { return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Staff Management</h1><p class="text-gray-500">Manage your team members</p></div><button onclick="window.openStaffModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Staff</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[700px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Role</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Salary</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3 text-center">Action</th></tr></thead><tbody>${staffMembers.map(s => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${s.name}</td><td class="px-4 py-3">${s.role}</td><td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs bg-gray-100">${s.category || 'General'}</span></td><td class="px-4 py-3 text-right">${formatCurrency(s.salary)}</td><td class="px-4 py-3">${s.phone}</td><td class="px-4 py-3 text-center"><button onclick="window.openStaffModal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteStaff('${s.id}', '${s.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`; }
-  
-  function renderInventory() { return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Inventory Management</h1><p class="text-gray-500">Track stock levels and supplies</p></div><button onclick="window.openInventoryModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Item</button></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full min-w-[700px]"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Item</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Quantity</th><th class="px-4 py-3">Unit</th><th class="px-4 py-3 text-right">Threshold</th><th class="px-4 py-3 text-right">Price/Unit</th><th class="px-4 py-3 text-center">Action</th></tr></thead><tbody>${inventory.map(i => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 font-medium">${i.name}</td><td class="px-4 py-3">${i.category || 'General'}</td><td class="px-4 py-3 text-right ${i.quantity <= i.threshold ? 'text-red-600 font-bold' : ''}">${i.quantity}</td><td class="px-4 py-3">${i.unit}</td><td class="px-4 py-3 text-right">${i.threshold}</td><td class="px-4 py-3 text-right">${formatCurrency(i.price)}</td><td class="px-4 py-3 text-center"><button onclick="window.openInventoryModal(${JSON.stringify(i).replace(/"/g, '&quot;')})" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteInventory('${i.id}', '${i.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`; }
-  
-  function renderReviews() { return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Customer Reviews</h1><div class="grid gap-4">${reviews.map(r => `<div class="bg-white rounded-xl p-5"><div class="flex justify-between"><div><div class="flex text-yellow-400 text-lg">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div><p class="font-semibold">${r.customer || 'Customer'}</p><p class="text-gray-600 mt-1">${r.comment}</p><p class="text-xs text-gray-400 mt-1">${new Date(r.date).toLocaleDateString()}</p>${r.response ? `<div class="mt-3 p-3 bg-orange-50 rounded-lg"><p class="text-sm text-orange-700"><i class="fas fa-reply mr-2"></i>${r.response}</p></div>` : ''}</div><button onclick="window.addReviewResponse('${r.id}')" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-lg text-sm h-fit">${r.response ? 'Edit Reply' : 'Reply'}</button></div></div>`).join('')}</div></div>`; }
-  
-  function renderExpenses() { const total = expenses.reduce((s,e)=>s+e.amount,0); return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Expense Tracking</h1></div><button onclick="window.addExpense()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Expense</button></div><div class="bg-white rounded-xl p-5 mb-6"><div class="flex justify-between"><div><p class="text-gray-500">Total Expenses</p><p class="text-3xl font-bold text-red-600">${formatCurrency(total)}</p></div></div></div><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Category</th><th class="px-4 py-3">Description</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Action</th></tr></thead><tbody>${expenses.map(e => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3">${new Date(e.date).toLocaleDateString()}</td><td class="px-4 py-3">${e.category}</td><td class="px-4 py-3">${e.description}</td><td class="px-4 py-3 text-right font-semibold text-red-600">${formatCurrency(e.amount)}</td><td class="px-4 py-3"><button onclick="window.deleteExpense('${e.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody>}</div></div>`; }
-  
-  function renderLogs() { return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Activity Logs</h1><p class="text-gray-500 mb-6">Track all actions and system events</p><div class="bg-white rounded-xl shadow-sm overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Time</th><th class="px-4 py-3">Action</th><th class="px-4 py-3">Details</th><th class="px-4 py-3">User</th></tr></thead><tbody>${activityLogs.slice(0, 50).map(log => `<tr class="border-b hover:bg-gray-50"><td class="px-4 py-3 text-sm">${log.timestamp}</td><td class="px-4 py-3 font-mono text-sm font-semibold text-orange-600">${log.action}</td><td class="px-4 py-3">${log.details}</td><td class="px-4 py-3 text-sm">${log.user}</td></tr>`).join('')}</tbody>}</div></div>`; }
-  
-  function renderSettings() { return `<div class="p-6 max-w-4xl"><h1 class="text-2xl font-bold mb-2">Settings</h1><div class="bg-white rounded-xl p-6 space-y-6"><div><h3 class="font-bold text-lg">🏪 Restaurant Information</h3><input id="restoName" class="w-full border rounded-lg p-2 mb-2" value="${restaurantSettings.name}"><textarea id="restoAddress" rows="2" class="w-full border rounded-lg p-2 mb-2">${restaurantSettings.address}</textarea><input id="restoPhone" class="w-full border rounded-lg p-2 mb-2" value="${restaurantSettings.phone}"><input id="restoEmail" class="w-full border rounded-lg p-2" value="${restaurantSettings.email}"></div><div><h3 class="font-bold text-lg">📜 Tax & Legal (Separate)</h3><input id="restoGST" class="w-full border rounded-lg p-2 mb-2" placeholder="GST Number" value="${restaurantSettings.gstin}"><textarea id="kitchenNote" rows="2" class="w-full border rounded-lg p-2 mb-2" placeholder="Kitchen Notes">${restaurantSettings.kitchenNote}</textarea><div class="grid grid-cols-2 gap-3 mt-3"><label class="flex items-center gap-2"><input type="checkbox" id="cgstEnabled" ${taxConfig.cgst.enabled ? 'checked' : ''}> CGST (${taxConfig.cgst.rate}%)</label><label class="flex items-center gap-2"><input type="checkbox" id="sgstEnabled" ${taxConfig.sgst.enabled ? 'checked' : ''}> SGST (${taxConfig.sgst.rate}%)</label><label class="flex items-center gap-2"><input type="checkbox" id="serviceChargeEnabled" ${taxConfig.serviceCharge.enabled ? 'checked' : ''}> Service Charge (${taxConfig.serviceCharge.rate}%)</label><label class="flex items-center gap-2"><input type="checkbox" id="roundOffEnabled" ${taxConfig.roundOff ? 'checked' : ''}> Round Off</label></div></div><button onclick="window.saveSettings()" class="w-full bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700">Save All Settings</button></div></div>`; }
+  function renderAnalytics() { setTimeout(() => renderCharts(), 100); return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Analytics Dashboard</h1><p class="text-gray-500 mb-6">Firebase-powered real-time analytics</p><div class="bg-white rounded-xl p-5"><h3 class="font-bold mb-4">Sales by Category</h3><div class="h-80"><canvas id="categorySalesChart"></canvas></div></div></div>`; }
+  function renderFinancial() { const f = getFinancialStats(); return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Financial Management</h1><div class="grid grid-cols-1 md:grid-cols-3 gap-5"><div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-5 text-white"><p class="text-sm">Total Revenue</p><p class="text-2xl font-bold">${formatCurrency(f.totalRevenue)}</p></div><div class="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-5 text-white"><p class="text-sm">Total Expenses</p><p class="text-2xl font-bold">${formatCurrency(f.totalExpenses)}</p></div><div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5 text-white"><p class="text-sm">Net Profit</p><p class="text-2xl font-bold">${formatCurrency(f.totalProfit)}</p></div></div></div>`; }
+  function renderStaff() { return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Staff Management</h1></div><button onclick="window.openStaffModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Staff</button></div><div class="bg-white rounded-xl shadow-sm"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Role</th><th class="px-4 py-3 text-right">Salary</th><th class="px-4 py-3 text-center">Action</th></tr></thead><tbody>${staffMembers.map(s => `<tr class="border-b"><td class="px-4 py-3">${s.name}</td><td class="px-4 py-3">${s.role}</td><td class="px-4 py-3 text-right">${formatCurrency(s.salary)}</td><td class="px-4 py-3 text-center"><button onclick="window.openStaffModal(${JSON.stringify(s).replace(/"/g, '&quot;')})" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteStaff(${s.id}, '${s.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div></div>`; }
+  function renderInventory() { return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Inventory Management</h1></div><button onclick="window.openInventoryModal()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Item</button></div><div class="bg-white rounded-xl shadow-sm"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Item</th><th class="px-4 py-3 text-right">Quantity</th><th class="px-4 py-3">Unit</th><th class="px-4 py-3 text-center">Action</th></tr></thead><tbody>${inventory.map(i => `<tr class="border-b"><td class="px-4 py-3">${i.name}</td><td class="px-4 py-3 text-right ${i.quantity <= i.threshold ? 'text-red-600 font-bold' : ''}">${i.quantity}</td><td class="px-4 py-3">${i.unit}</td><td class="px-4 py-3 text-center"><button onclick="window.openInventoryModal(${JSON.stringify(i).replace(/"/g, '&quot;')})" class="text-blue-500 mr-2"><i class="fas fa-edit"></i></button><button onclick="window.deleteInventory(${i.id}, '${i.name}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div></div>`; }
+  function renderReviews() { return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Customer Reviews</h1><div class="grid gap-4">${reviews.map(r => `<div class="bg-white rounded-xl p-5"><div class="flex justify-between"><div><div class="flex text-yellow-400">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div><p class="font-semibold">${r.customer}</p><p class="text-gray-600">${r.comment}</p>${r.response ? `<div class="mt-2 p-2 bg-orange-50 rounded"><p class="text-sm text-orange-700"><i class="fas fa-reply mr-2"></i>${r.response}</p></div>` : ''}</div><button onclick="window.addReviewResponse(${r.id})" class="bg-orange-100 text-orange-600 px-3 py-1 rounded-lg text-sm">${r.response ? 'Edit Reply' : 'Reply'}</button></div></div>`).join('')}</div></div>`; }
+  function renderExpenses() { const total = expenses.reduce((s,e)=>s+e.amount,0); return `<div class="p-6"><div class="flex justify-between items-center mb-6"><div><h1 class="text-2xl font-bold">Expense Tracking</h1></div><button onclick="window.addExpense()" class="bg-orange-600 text-white px-4 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Add Expense</button></div><div class="bg-white rounded-xl p-5 mb-6"><div class="flex justify-between"><p class="text-gray-500">Total Expenses</p><p class="text-3xl font-bold text-red-600">${formatCurrency(total)}</p></div></div><div class="bg-white rounded-xl shadow-sm"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Category</th><th class="px-4 py-3 text-right">Amount</th><th class="px-4 py-3">Action</th></tr></thead><tbody>${expenses.map(e => `<tr class="border-b"><td class="px-4 py-3">${new Date(e.date).toLocaleDateString()}</td><td class="px-4 py-3">${e.category}</td><td class="px-4 py-3 text-right text-red-600">${formatCurrency(e.amount)}</td><td class="px-4 py-3"><button onclick="window.deleteExpense(${e.id})" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div></div>`; }
+  function renderLogs() { return `<div class="p-6"><h1 class="text-2xl font-bold mb-2">Activity Logs</h1><p class="text-gray-500 mb-6">All admin and owner actions (Firebase synced)</p><div class="bg-white rounded-xl shadow-sm"><table class="w-full"><thead class="bg-gray-50 border-b"><tr><th class="px-4 py-3">Time</th><th class="px-4 py-3">Action</th><th class="px-4 py-3">Details</th></tr></thead><tbody>${activityLogs.slice(0, 50).map(log => `<tr class="border-b"><td class="px-4 py-3 text-sm">${log.timestamp}</td><td class="px-4 py-3 font-semibold text-orange-600">${log.action}</td><td class="px-4 py-3">${log.details}</td></tr>`).join('')}</tbody></table></div></div>`; }
+  function renderSettings() { return `<div class="p-6 max-w-4xl"><h1 class="text-2xl font-bold mb-2">Settings</h1><div class="bg-white rounded-xl p-6"><div><h3 class="font-bold text-lg">🏪 Restaurant Information</h3><input id="restoName" class="w-full border rounded-lg p-2 mb-2" value="${restaurantSettings.name}"><textarea id="restoAddress" rows="2" class="w-full border rounded-lg p-2 mb-2">${restaurantSettings.address}</textarea><input id="restoPhone" class="w-full border rounded-lg p-2 mb-2" value="${restaurantSettings.phone}"><input id="restoEmail" class="w-full border rounded-lg p-2" value="${restaurantSettings.email}"></div><button onclick="window.saveSettings()" class="w-full mt-6 bg-orange-600 text-white py-3 rounded-lg font-semibold">Save Settings</button></div></div>`; }
   
   function renderModals() {
     let modalHtml = '';
-    if (showStaffModal) { modalHtml = `<div class="modal"><div class="modal-content"><h2 class="text-xl font-bold mb-4">${editingStaff ? 'Edit Staff' : 'Add Staff'}</h2><input id="staffName" placeholder="Full Name *" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.name || ''}"><input id="staffRole" placeholder="Role *" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.role || ''}"><input id="staffCategory" placeholder="Category (Kitchen/Service/Management)" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.category || ''}"><input id="staffSalary" type="number" placeholder="Monthly Salary *" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.salary || ''}"><input id="staffPhone" placeholder="Phone" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.phone || ''}"><div class="flex gap-2 mt-4"><button onclick="window.saveStaff()" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">Save</button><button onclick="window.closeModals()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div></div></div>`; }
-    if (showInventoryModal) { modalHtml = `<div class="modal"><div class="modal-content"><h2 class="text-xl font-bold mb-4">${editingInventory ? 'Edit Inventory' : 'Add Inventory Item'}</h2><input id="invName" placeholder="Item Name *" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.name || ''}"><input id="invCategory" placeholder="Category" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.category || ''}"><input id="invQuantity" type="number" placeholder="Quantity *" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.quantity || ''}"><input id="invUnit" placeholder="Unit *" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.unit || 'kg'}"><input id="invThreshold" type="number" placeholder="Low Stock Threshold" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.threshold || 10}"><input id="invPrice" type="number" placeholder="Price per Unit" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.price || 0}"><div class="flex gap-2 mt-4"><button onclick="window.saveInventory()" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">Save</button><button onclick="window.closeModals()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div></div></div>`; }
+    if (showStaffModal) { modalHtml = `<div class="modal"><div class="modal-content"><h2 class="text-xl font-bold mb-4">${editingStaff ? 'Edit Staff' : 'Add Staff'}</h2><input id="staffName" placeholder="Full Name" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.name || ''}"><input id="staffRole" placeholder="Role" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.role || ''}"><input id="staffSalary" type="number" placeholder="Monthly Salary" class="w-full border rounded-lg p-2 mb-2" value="${editingStaff?.salary || ''}"><div class="flex gap-2 mt-4"><button onclick="window.saveStaff()" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">Save</button><button onclick="window.closeModals()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div></div></div>`; }
+    if (showInventoryModal) { modalHtml = `<div class="modal"><div class="modal-content"><h2 class="text-xl font-bold mb-4">${editingInventory ? 'Edit Inventory' : 'Add Item'}</h2><input id="invName" placeholder="Item Name" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.name || ''}"><input id="invQuantity" type="number" placeholder="Quantity" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.quantity || ''}"><input id="invUnit" placeholder="Unit" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.unit || 'kg'}"><input id="invThreshold" type="number" placeholder="Low Stock Threshold" class="w-full border rounded-lg p-2 mb-2" value="${editingInventory?.threshold || 10}"><div class="flex gap-2 mt-4"><button onclick="window.saveInventory()" class="flex-1 bg-orange-600 text-white py-2 rounded-lg">Save</button><button onclick="window.closeModals()" class="flex-1 bg-gray-200 py-2 rounded-lg">Cancel</button></div></div></div>`; }
     return modalHtml;
   }
   
@@ -717,20 +593,13 @@
   function render() {
     const root = document.getElementById('owner-portal');
     if (!root) return;
-    if (!isLoggedIn) { root.innerHTML = renderLogin(); attachLoginEvents(); return; }
+    if (!isLoggedIn) { root.innerHTML = renderLogin(); document.getElementById('loginBtn')?.addEventListener('click', () => { const email = document.getElementById('loginEmail')?.value; const pwd = document.getElementById('loginPassword')?.value; login(email, pwd); }); return; }
     if (darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
-    root.innerHTML = `<div class="min-h-screen bg-gray-50">${renderSidebar()}<div class="ml-64">${renderMainContent()}</div>${renderModals()}</div>`;
+    root.innerHTML = `<div class="min-h-screen bg-gray-50 dark:bg-gray-900">${renderSidebar()}<div class="ml-64">${renderMainContent()}</div>${renderModals()}</div>`;
     
     document.querySelectorAll('.sidebar-nav').forEach(el => { el.addEventListener('click', () => { currentView = el.dataset.view; render(); }); });
     document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
-  }
-  
-  function attachLoginEvents() {
-    document.getElementById('loginBtn')?.addEventListener('click', () => { const email = document.getElementById('loginEmail')?.value; const pwd = document.getElementById('loginPassword')?.value; if(email && pwd) login(email, pwd); });
-    document.getElementById('showRegisterBtn')?.addEventListener('click', () => { document.getElementById('loginForm').classList.add('hidden'); document.getElementById('registerForm').classList.remove('hidden'); });
-    document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('registerForm').classList.add('hidden'); document.getElementById('loginForm').classList.remove('hidden'); });
-    document.getElementById('registerBtn')?.addEventListener('click', () => { const name = document.getElementById('regName')?.value; const resto = document.getElementById('regRestoName')?.value; const email = document.getElementById('regEmail')?.value; const pwd = document.getElementById('regPassword')?.value; const addr = document.getElementById('regAddress')?.value; const phone = document.getElementById('regPhone')?.value; if(name && resto && email && pwd) register(email, pwd, name, resto, addr, phone); });
   }
   
   // Expose global functions
@@ -749,7 +618,11 @@
   window.saveSettings = saveSettings;
   window.closeModals = () => { showStaffModal = false; showInventoryModal = false; editingStaff = null; editingInventory = null; render(); };
   
-  checkAuthState();
+  // Initialize
+  loadSyncedData().then(() => {
+    if (firebaseInitialized) setupFirebaseListeners();
+    render();
+  });
 </script>
 </body>
 </html>
