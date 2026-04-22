@@ -18,8 +18,6 @@
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #e2e8f0; }
     ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
-    .status-tracker-line { position: absolute; top: 24px; left: 0; right: 0; height: 3px; background: #e2e8f0; z-index: 0; }
-    .status-dot-active { background: #f97316; box-shadow: 0 0 0 4px rgba(249,115,22,0.2); }
     .loading-spinner {
       border: 3px solid #f3f3f3;
       border-top: 3px solid #f97316;
@@ -28,10 +26,7 @@
       height: 40px;
       animation: spin 1s linear infinite;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     
     .veg-dot {
@@ -125,7 +120,6 @@
     query, 
     where, 
     doc, 
-    getDoc, 
     serverTimestamp,
     getDocs
   } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -137,7 +131,6 @@
   const TAX_SETTINGS = {
     cgst: { rate: 2.5, name: "CGST" },
     sgst: { rate: 2.5, name: "SGST" },
-    totalGst: 5,
     serviceCharge: { rate: 5, name: "Service Charge", enabled: true },
     roundOff: true
   };
@@ -146,10 +139,6 @@
   function getRestaurantIdFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     let restaurantId = urlParams.get('restaurant') || urlParams.get('r') || urlParams.get('id');
-    const table = urlParams.get('table');
-    if (table && !restaurantId) {
-      console.log("Table detected but no restaurant ID. Please use ?restaurant=ID&table=1");
-    }
     return restaurantId;
   }
   
@@ -172,16 +161,13 @@
   let billCounter = 1;
   
   function loadBillCounter() {
-    const saved = localStorage.getItem('bill_counter');
-    if (saved) {
-      billCounter = parseInt(saved);
-    } else {
-      billCounter = 1;
-    }
+    const saved = localStorage.getItem('customer_bill_counter');
+    if (saved) billCounter = parseInt(saved);
+    else billCounter = 1;
   }
   
   function saveBillCounter() {
-    localStorage.setItem('bill_counter', billCounter);
+    localStorage.setItem('customer_bill_counter', billCounter);
   }
   
   function getNextBillNumber() {
@@ -195,16 +181,13 @@
   
   // ======================== DEFAULT MENU (FALLBACK) ========================
   const DEFAULT_MENU = [
-    { id: 1, name: "Paneer Tikka", price: 220, image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Grilled cottage cheese", rating: 4.5, veg: true, popular: true },
-    { id: 2, name: "Veg Spring Roll", price: 180, image: "https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Crispy rolls", rating: 4.3, veg: true, popular: false },
-    { id: 3, name: "Chicken 65", price: 280, image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Spicy deep-fried chicken", rating: 4.8, veg: false, popular: true },
-    { id: 4, name: "Chicken Biryani", price: 320, image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Aromatic basmati rice", rating: 4.9, veg: false, popular: true },
-    { id: 5, name: "Veg Biryani", price: 250, image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Fragrant rice with vegetables", rating: 4.6, veg: true, popular: false },
-    { id: 6, name: "Butter Chicken", price: 380, image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Creamy tomato-based curry", rating: 4.9, veg: false, popular: true },
-    { id: 7, name: "Butter Naan", price: 45, image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=150&h=150&fit=crop", category: "Breads", description: "Soft tandoori bread", rating: 4.4, veg: true, popular: false },
-    { id: 8, name: "Garlic Naan", price: 55, image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=150&h=150&fit=crop", category: "Breads", description: "Flavorful naan with garlic", rating: 4.5, veg: true, popular: false },
-    { id: 9, name: "Mango Lassi", price: 90, image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=150&h=150&fit=crop", category: "Beverages", description: "Refreshing mango drink", rating: 4.9, veg: true, popular: true },
-    { id: 10, name: "Gulab Jamun", price: 80, image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=150&h=150&fit=crop", category: "Desserts", description: "Soft milk dumplings", rating: 4.8, veg: true, popular: true }
+    { id: 1, name: "Paneer Tikka", price: 220, image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Grilled cottage cheese", rating: 4.5, veg: true, popular: true, available: true },
+    { id: 2, name: "Chicken 65", price: 280, image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=150&h=150&fit=crop", category: "Starters", description: "Spicy deep-fried chicken", rating: 4.8, veg: false, popular: true, available: true },
+    { id: 3, name: "Butter Chicken", price: 380, image: "https://images.pexels.com/photos/2338407/pexels-photo-2338407.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Creamy tomato-based curry", rating: 4.9, veg: false, popular: true, available: true },
+    { id: 4, name: "Veg Biryani", price: 250, image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=150&h=150&fit=crop", category: "Main Course", description: "Fragrant rice with vegetables", rating: 4.6, veg: true, popular: false, available: true },
+    { id: 5, name: "Garlic Naan", price: 55, image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=150&h=150&fit=crop", category: "Breads", description: "Flavorful naan with garlic", rating: 4.5, veg: true, popular: false, available: true },
+    { id: 6, name: "Mango Lassi", price: 90, image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=150&h=150&fit=crop", category: "Beverages", description: "Refreshing mango drink", rating: 4.9, veg: true, popular: true, available: true },
+    { id: 7, name: "Gulab Jamun", price: 80, image: "https://images.pexels.com/photos/2067401/pexels-photo-2067401.jpeg?w=150&h=150&fit=crop", category: "Desserts", description: "Soft milk dumplings", rating: 4.8, veg: true, popular: true, available: true }
   ];
   
   // ======================== TAX CALCULATION ========================
@@ -227,29 +210,60 @@
   }
   
   // ======================== CART MANAGEMENT ========================
-  function saveCart() { localStorage.setItem(`cart_${restaurantId}_${tableNumber}`, JSON.stringify(cart)); }
-  function loadCart() { const saved = localStorage.getItem(`cart_${restaurantId}_${tableNumber}`); cart = saved ? JSON.parse(saved) : []; }
+  function saveCart() { 
+    localStorage.setItem(`cart_${restaurantId}_${tableNumber}`, JSON.stringify(cart)); 
+  }
+  
+  function loadCart() { 
+    const saved = localStorage.getItem(`cart_${restaurantId}_${tableNumber}`); 
+    cart = saved ? JSON.parse(saved) : []; 
+  }
   
   function addToCart(item) {
+    if (!item.available) {
+      showToast(`${item.name} is currently unavailable`, 'error');
+      return;
+    }
     const existing = cart.find(i => i.id === item.id);
-    if (existing) { existing.quantity = (existing.quantity || 1) + 1; } 
-    else { cart.push({ ...item, quantity: 1 }); }
+    if (existing) { 
+      existing.quantity = (existing.quantity || 1) + 1; 
+    } else { 
+      cart.push({ ...item, quantity: 1 }); 
+    }
     saveCart();
     showToast(`${item.name} added to cart`, 'success');
     render();
   }
   
-  function removeFromCart(index) { const removed = cart[index]; cart.splice(index, 1); saveCart(); showToast(`${removed.name} removed`, 'info'); render(); }
+  function removeFromCart(index) { 
+    const removed = cart[index]; 
+    cart.splice(index, 1); 
+    saveCart(); 
+    showToast(`${removed.name} removed`, 'info'); 
+    render(); 
+  }
+  
   function updateQuantity(index, change) {
     const item = cart[index];
     if (item) {
       const newQty = (item.quantity || 1) + change;
-      if (newQty <= 0) { removeFromCart(index); } 
-      else { item.quantity = newQty; saveCart(); render(); }
+      if (newQty <= 0) { 
+        removeFromCart(index); 
+      } else { 
+        item.quantity = newQty; 
+        saveCart(); 
+        render(); 
+      }
     }
   }
-  function getCartTotal() { return cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0); }
-  function getCartCount() { return cart.reduce((sum, item) => sum + (item.quantity || 1), 0); }
+  
+  function getCartTotal() { 
+    return cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0); 
+  }
+  
+  function getCartCount() { 
+    return cart.reduce((sum, item) => sum + (item.quantity || 1), 0); 
+  }
   
   // ======================== FIREBASE: GET RESTAURANT DATA ========================
   async function loadRestaurantData() {
@@ -266,10 +280,10 @@
       
       if (!snapshot.empty) {
         restaurantData = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-        console.log("Restaurant found:", restaurantData.name);
+        console.log("✅ Restaurant found:", restaurantData.name);
         return true;
       } else {
-        console.error("Restaurant not found with ID:", restaurantId);
+        console.error("❌ Restaurant not found with ID:", restaurantId);
         showToast("Restaurant not found. Please scan valid QR code.", "error");
         return false;
       }
@@ -291,8 +305,9 @@
     render();
     
     const menuRef = collection(db, "menu");
-    const menuQuery = query(menuRef, where("restaurantId", "==", restaurantId), where("available", "==", true));
+    const menuQuery = query(menuRef, where("restaurantId", "==", restaurantId));
     
+    if (unsubscribeMenu) unsubscribeMenu();
     unsubscribeMenu = onSnapshot(menuQuery, (snapshot) => {
       if (!snapshot.empty) {
         menuItems = [];
@@ -300,14 +315,17 @@
           const data = doc.data();
           menuItems.push({ id: doc.id, ...data });
         });
+        // Filter only available items for display
+        const availableItems = menuItems.filter(item => item.available !== false);
+        console.log(`✅ Menu loaded: ${availableItems.length} available items out of ${menuItems.length}`);
         isLoading = false;
         if (currentStep === 1) render();
-        console.log(`Menu loaded for ${restaurantData?.name}: ${menuItems.length} items`);
       } else {
+        // Use default menu if no items in Firebase
         menuItems = [...DEFAULT_MENU];
         isLoading = false;
         if (currentStep === 1) render();
-        console.log("Using default menu (No items found for this restaurant)");
+        console.log("⚠️ Using default menu (No items found for this restaurant)");
       }
     }, (error) => {
       console.error("Error loading menu:", error);
@@ -320,13 +338,17 @@
   
   // ======================== FIREBASE: PLACE ORDER ========================
   async function placeOrder() {
-    if (cart.length === 0) { showToast('Your cart is empty', 'error'); return false; }
-    if (!restaurantId) { showToast('Restaurant not identified', 'error'); return false; }
+    if (cart.length === 0) { 
+      showToast('Your cart is empty', 'error'); 
+      return false; 
+    }
+    if (!restaurantId) { 
+      showToast('Restaurant not identified', 'error'); 
+      return false; 
+    }
     
     const subtotal = getCartTotal();
     const taxCalc = calculateBillWithTax(subtotal);
-    
-    // Generate bill number starting from 0001
     const billNumber = getNextBillNumber();
     
     const orderData = {
@@ -353,15 +375,14 @@
       restaurantName: restaurantData?.name || 'QR Dine'
     };
     
-    console.log("Placing order with Bill Number:", billNumber);
-    console.log("Order Data:", orderData);
+    console.log("📦 Placing order:", { billNumber, restaurantId, items: cart.length, total: taxCalc.grandTotal });
     
     try {
       const docRef = await addDoc(collection(db, "orders"), { ...orderData, createdAt: serverTimestamp() });
       currentOrderId = docRef.id;
       currentOrder = { id: docRef.id, ...orderData };
       
-      console.log("Order placed with ID:", currentOrderId, "Bill Number:", currentOrder.billNumber);
+      console.log("✅ Order placed successfully! ID:", currentOrderId, "Bill:", billNumber);
       
       listenToOrderStatus(currentOrderId);
       
@@ -372,7 +393,7 @@
       render();
       return true;
     } catch (error) {
-      console.error("Error placing order:", error);
+      console.error("❌ Error placing order:", error);
       showToast('Failed to place order: ' + error.message, 'error');
       return false;
     }
@@ -390,10 +411,10 @@
         if (currentStep === 3) render();
         
         const messages = {
-          'Accepted': 'Order accepted by restaurant!',
-          'Preparing': 'Your food is being prepared!',
-          'Ready': 'Your order is ready for pickup!',
-          'Served': 'Enjoy your meal!'
+          'Accepted': '✅ Order accepted by restaurant!',
+          'Preparing': '🍳 Your food is being prepared!',
+          'Ready': '🔔 Your order is ready for pickup!',
+          'Served': '🍽️ Enjoy your meal!'
         };
         if (messages[updated.status]) showToast(messages[updated.status], 'info');
       }
@@ -413,7 +434,11 @@
   }
   
   function getFilteredItems() {
-    let items = selectedCategory === 'All' ? menuItems : menuItems.filter(item => item.category === selectedCategory);
+    // Only show available items to customers
+    let items = menuItems.filter(item => item.available !== false);
+    if (selectedCategory !== 'All') {
+      items = items.filter(item => item.category === selectedCategory);
+    }
     if (selectedFoodType === 'veg') items = items.filter(item => item.veg === true);
     if (selectedFoodType === 'nonveg') items = items.filter(item => item.veg === false);
     return items;
@@ -425,21 +450,22 @@
   // ======================== RENDER FUNCTIONS ========================
   function renderMenuStep() {
     if (isLoading) {
-      return `<div class="max-w-4xl mx-auto px-4 py-5"><div class="loading-spinner mx-auto"></div><p class="text-center mt-4">Loading menu...</p></div>`;
+      return `<div class="max-w-4xl mx-auto px-4 py-5"><div class="loading-spinner mx-auto"></div><p class="text-center mt-4">Loading delicious menu...</p></div>`;
     }
     
     const filtered = getFilteredItems();
     const cartCount = getCartCount();
     const cartTotal = getCartTotal();
-    const vegCount = menuItems.filter(i => i.veg).length;
-    const nonVegCount = menuItems.filter(i => !i.veg).length;
+    const totalItems = menuItems.filter(i => i.available !== false).length;
+    const vegCount = menuItems.filter(i => i.veg === true && i.available !== false).length;
+    const nonVegCount = menuItems.filter(i => i.veg === false && i.available !== false).length;
     
     return `
       <div class="max-w-4xl mx-auto px-4 py-5 pb-28 min-h-screen">
         <div class="bg-white rounded-2xl shadow-sm p-5 mb-6 sticky top-2 z-10 backdrop-blur-sm bg-white/95 border border-gray-100">
           <div class="flex justify-between items-center">
             <div>
-              <h1 class="text-2xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">QR Dine</h1>
+              <h1 class="text-2xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">${restaurantData?.name || 'QR Dine'}</h1>
               <div class="flex items-center gap-2 mt-1">
                 <span class="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-600"><i class="fas fa-table mr-1"></i> Table ${tableNumber}</span>
                 <span class="text-xs text-gray-400"><i class="fas fa-qrcode"></i> Scan to order</span>
@@ -453,7 +479,7 @@
         </div>
         
         <div class="flex gap-3 mb-5">
-          <button class="section-tab flex-1 py-2 rounded-xl font-semibold ${selectedFoodType === 'all' ? 'active bg-orange-600 text-white' : 'bg-white text-gray-600 shadow-sm'}" data-foodtype="all">All Items (${menuItems.length})</button>
+          <button class="section-tab flex-1 py-2 rounded-xl font-semibold ${selectedFoodType === 'all' ? 'active bg-orange-600 text-white' : 'bg-white text-gray-600 shadow-sm'}" data-foodtype="all">All (${totalItems})</button>
           <button class="section-tab flex-1 py-2 rounded-xl font-semibold ${selectedFoodType === 'veg' ? 'active bg-orange-600 text-white' : 'bg-white text-gray-600 shadow-sm'}" data-foodtype="veg"><span class="veg-dot green"></span> Veg (${vegCount})</button>
           <button class="section-tab flex-1 py-2 rounded-xl font-semibold ${selectedFoodType === 'nonveg' ? 'active bg-orange-600 text-white' : 'bg-white text-gray-600 shadow-sm'}" data-foodtype="nonveg"><span class="veg-dot red"></span> Non-Veg (${nonVegCount})</button>
         </div>
@@ -462,7 +488,7 @@
           ${categories.map(cat => `<button class="category-tab px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${selectedCategory === cat ? 'bg-orange-600 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100 shadow-sm'}" data-category="${cat}">${cat === 'All' ? '<i class="fas fa-grid mr-1"></i>' : ''} ${cat}</button>`).join('')}
         </div>
         
-        ${filtered.length === 0 ? `<div class="text-center py-12 bg-white rounded-xl"><i class="fas fa-utensils text-4xl text-gray-300 mb-3"></i><p class="text-gray-500">No items in this category</p></div>` : `
+        ${filtered.length === 0 ? `<div class="text-center py-12 bg-white rounded-xl"><i class="fas fa-utensils text-4xl text-gray-300 mb-3"></i><p class="text-gray-500">No items available in this category</p></div>` : `
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             ${filtered.map(item => `
               <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all p-3 flex gap-3 menu-item cursor-pointer" data-item='${JSON.stringify(item)}'>
@@ -515,137 +541,68 @@
   }
   
   function renderConfirmationStep() {
-    if (!currentOrder) return `<div class="min-h-screen flex items-center justify-center"><div class="loading-spinner mx-auto"></div><p class="mt-2">Loading order...</p></div>`;
+    if (!currentOrder) return `<div class="min-h-screen flex items-center justify-center"><div class="loading-spinner mx-auto"></div><p class="mt-2">Loading order details...</p></div>`;
     
-    const statusSteps = [
-      { key: 'Pending', label: 'Order Received', icon: 'fa-receipt', desc: 'Chef will start soon' },
-      { key: 'Accepted', label: 'Order Accepted', icon: 'fa-check', desc: 'Restaurant accepted your order' },
-      { key: 'Preparing', label: 'Preparing', icon: 'fa-utensils', desc: 'Your meal is being cooked' },
-      { key: 'Ready', label: 'Ready to Serve', icon: 'fa-bell', desc: 'Your order is ready' },
-      { key: 'Served', label: 'Served', icon: 'fa-smile', desc: 'Enjoy your meal!' }
-    ];
-    
-    const currentIdx = statusSteps.findIndex(s => s.key === currentOrder.status);
+    const statusSteps = ['Pending', 'Accepted', 'Preparing', 'Ready', 'Served'];
+    const currentIdx = statusSteps.indexOf(currentOrder.status);
     const orderDate = new Date(currentOrder.timestamp).toLocaleString();
-    const orderTime = new Date(currentOrder.timestamp).toLocaleTimeString();
     
     return `
       <div class="min-h-screen bg-gradient-to-b from-orange-50 to-white py-8 px-4">
         <div class="max-w-2xl mx-auto">
-          <!-- Order Status Tracker - TOP SECTION -->
           <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
-            <h2 class="text-xl font-bold text-center text-gray-800 mb-6">Track Your Order</h2>
-            <div class="relative">
-              <div class="status-tracker-line"></div>
-              <div class="relative flex justify-between z-10">
+            <div class="text-center mb-6">
+              <div class="inline-block bg-green-100 rounded-full p-4 mb-4">
+                <i class="fas fa-check-circle text-green-600 text-4xl"></i>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-800">Order Confirmed!</h2>
+              <p class="text-gray-500 mt-1">Table ${currentOrder.tableNumber} • Bill #${currentOrder.billNumber}</p>
+            </div>
+            
+            <div class="relative py-8">
+              <div class="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2"></div>
+              <div class="relative flex justify-between">
                 ${statusSteps.map((step, idx) => `
-                  <div class="text-center flex-1">
-                    <div class="status-dot ${idx < currentIdx ? 'completed' : idx === currentIdx ? 'active' : ''}">
-                      <i class="fas ${step.icon} text-xl"></i>
+                  <div class="text-center z-10 flex-1">
+                    <div class="w-11 h-11 rounded-full border-2 flex items-center justify-center mx-auto transition-all ${idx <= currentIdx ? (idx < currentIdx ? 'bg-green-500 border-green-500' : 'bg-orange-500 border-orange-500') : 'bg-white border-gray-300'}">
+                      ${idx < currentIdx ? '<i class="fas fa-check text-white text-sm"></i>' : `<span class="text-sm font-bold ${idx === currentIdx ? 'text-white' : 'text-gray-400'}">${idx + 1}</span>`}
                     </div>
-                    <p class="text-xs font-semibold mt-2 ${idx === currentIdx ? 'text-orange-600' : 'text-gray-400'}">${step.label}</p>
-                    <p class="text-xs text-gray-400 mt-1 hidden sm:block">${step.desc}</p>
+                    <p class="text-xs mt-3 font-semibold ${idx === currentIdx ? 'text-orange-600' : 'text-gray-400'}">${step}</p>
                   </div>
                 `).join('')}
               </div>
             </div>
-            <div class="mt-6 text-center">
-              <p class="text-sm text-gray-500">
-                <i class="fas fa-clock mr-1"></i> Estimated time: ${currentOrder.estimatedTime || 20} minutes
-              </p>
-              <p class="text-xs text-green-600 mt-2">
-                <i class="fas fa-check-circle"></i> Current Status: <span class="font-semibold">${currentOrder.status}</span>
-              </p>
+            
+            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-600">Order ID</span>
+                <span class="font-mono text-sm">${currentOrder.id.slice(-8)}</span>
+              </div>
+              <div class="flex justify-between items-center mt-2">
+                <span class="text-gray-600">Estimated Time</span>
+                <span class="font-bold text-orange-600">${currentOrder.estimatedTime} minutes</span>
+              </div>
             </div>
           </div>
           
-          <!-- Bill Summary - BOTTOM SECTION -->
           <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div class="p-6">
-              <!-- Restaurant Header -->
-              <div class="text-center border-b pb-4 mb-4">
-                <h1 class="text-2xl font-bold text-gray-800">${restaurantData?.name || 'QR Dine'}</h1>
-                <p class="text-sm text-gray-500 mt-1">Digital Restaurant Bill</p>
-                <div class="flex justify-center gap-6 mt-3 text-xs text-gray-500">
-                  <span><strong>Bill No:</strong> ${currentOrder.billNumber || '0001'}</span>
-                  <span><strong>Table:</strong> ${currentOrder.tableNumber}</span>
-                  <span><strong>Date:</strong> ${orderDate.split(',')[0]}</span>
-                  <span><strong>Time:</strong> ${orderTime}</span>
+            <div class="p-5 border-b bg-gray-50">
+              <h3 class="font-bold text-gray-800">Order Summary</h3>
+            </div>
+            <div class="p-5">
+              ${currentOrder.items.map(item => `
+                <div class="flex justify-between py-2 border-b">
+                  <div><span class="veg-dot ${item.veg ? 'green' : 'red'}"></span>${escapeHtml(item.name)} x${item.quantity}</div>
+                  <div class="font-medium">${formatCurrency(item.price * item.quantity)}</div>
                 </div>
-              </div>
-              
-              <!-- Order Items Table -->
-              <div class="mb-4">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="border-b bg-gray-50">
-                      <th class="text-left py-2 px-2">Sl No</th>
-                      <th class="text-left py-2 px-2">Item Name</th>
-                      <th class="text-center py-2 px-2">Qty</th>
-                      <th class="text-right py-2 px-2">Price</th>
-                      <th class="text-right py-2 px-2">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${currentOrder.items.map((item, index) => `
-                      <tr class="border-b">
-                        <td class="py-2 px-2">${String(index + 1).padStart(2, '0')}</td>
-                        <td class="py-2 px-2">${escapeHtml(item.name)}</td>
-                        <td class="text-center py-2 px-2">${item.quantity}</td>
-                        <td class="text-right py-2 px-2">${formatCurrency(item.price)}</td>
-                        <td class="text-right py-2 px-2">${formatCurrency(item.price * item.quantity)}</td>
-                       </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-              
-              <!-- Bill Summary -->
-              <div class="border-t pt-4 mt-2">
-                <div class="flex justify-between text-sm py-1">
-                  <span class="text-gray-600">Subtotal</span>
-                  <span class="font-medium">${formatCurrency(currentOrder.subtotal)}</span>
-                </div>
-                <div class="flex justify-between text-sm py-1">
-                  <span class="text-gray-600">CGST (2.5%)</span>
-                  <span class="font-medium">${formatCurrency(currentOrder.cgst)}</span>
-                </div>
-                <div class="flex justify-between text-sm py-1">
-                  <span class="text-gray-600">SGST (2.5%)</span>
-                  <span class="font-medium">${formatCurrency(currentOrder.sgst)}</span>
-                </div>
-                <div class="flex justify-between text-sm py-1">
-                  <span class="text-gray-600">Service Charge (5%)</span>
-                  <span class="font-medium">${formatCurrency(currentOrder.serviceCharge)}</span>
-                </div>
-                ${currentOrder.roundOff !== 0 ? `
-                <div class="flex justify-between text-sm py-1">
-                  <span class="text-gray-600">Round Off</span>
-                  <span class="font-medium">${currentOrder.roundOff > 0 ? '+' : ''}${formatCurrency(currentOrder.roundOff)}</span>
-                </div>
-                ` : ''}
-                <div class="flex justify-between text-base font-bold pt-2 mt-2 border-t">
-                  <span>Grand Total</span>
-                  <span class="text-orange-600 text-lg">${formatCurrency(currentOrder.totalPrice)}</span>
-                </div>
-              </div>
-              
-              <!-- Payment Status -->
-              <div class="mt-4 pt-3 border-t text-center">
-                <p class="text-sm font-medium text-green-600">Payment Status: Pending</p>
-                <p class="text-xs text-gray-400">Please pay at counter</p>
-              </div>
-              
-              <!-- Footer -->
-              <div class="text-center text-xs text-gray-400 mt-6 pt-4 border-t">
-                <p>Thank you for dining with us!</p>
-                <p class="mt-1">Order ID: ${currentOrder.id.slice(-8)}</p>
-                <p class="mt-2">** This is a computer generated bill **</p>
+              `).join('')}
+              <div class="flex justify-between pt-3 mt-2 border-t font-bold">
+                <span>Total Amount</span>
+                <span class="text-orange-600">${formatCurrency(currentOrder.totalPrice)}</span>
               </div>
             </div>
           </div>
           
-          <!-- Action Buttons -->
           <div class="flex gap-3 mt-6">
             <button id="newOrderBtn" class="flex-1 bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition flex items-center justify-center gap-2">
               <i class="fas fa-plus"></i> New Order
@@ -673,7 +630,13 @@
       document.getElementById('placeOrderBtn')?.addEventListener('click', async () => { if (await placeOrder()) { currentStep = 3; render(); } });
     }
     if (currentStep === 3) {
-      document.getElementById('newOrderBtn')?.addEventListener('click', () => { currentOrderId = null; currentOrder = null; currentStep = 1; if (unsubscribeOrder) unsubscribeOrder(); render(); });
+      document.getElementById('newOrderBtn')?.addEventListener('click', () => { 
+        currentOrderId = null; 
+        currentOrder = null; 
+        currentStep = 1; 
+        if (unsubscribeOrder) unsubscribeOrder(); 
+        render(); 
+      });
     }
   }
   
@@ -700,6 +663,7 @@
             <h2 class="text-xl font-semibold text-gray-800">Invalid QR Code</h2>
             <p class="text-gray-500 mt-2">Please scan a valid restaurant QR code.</p>
             <p class="text-xs text-gray-400 mt-4">Make sure the QR code includes restaurant ID</p>
+            <p class="text-xs text-orange-500 mt-2">Example: ?restaurant=OWNER_UID&table=5</p>
           </div>
         </div>
       `;
@@ -714,6 +678,7 @@
             <i class="fas fa-store-slash text-5xl text-gray-300 mb-4"></i>
             <h2 class="text-xl font-semibold text-gray-800">Restaurant Not Found</h2>
             <p class="text-gray-500 mt-2">This QR code is not associated with any restaurant.</p>
+            <p class="text-xs text-gray-400 mt-4">Restaurant ID: ${restaurantId}</p>
           </div>
         </div>
       `;
