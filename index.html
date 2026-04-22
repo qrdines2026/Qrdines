@@ -127,9 +127,7 @@
     doc, 
     getDoc, 
     serverTimestamp,
-    getDocs,
-    orderBy,
-    updateDoc
+    getDocs
   } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const app = initializeApp(firebaseConfig);
@@ -304,7 +302,7 @@
         });
         isLoading = false;
         if (currentStep === 1) render();
-        console.log(`✅ Menu loaded for ${restaurantData?.name}: ${menuItems.length} items`);
+        console.log(`Menu loaded for ${restaurantData?.name}: ${menuItems.length} items`);
       } else {
         menuItems = [...DEFAULT_MENU];
         isLoading = false;
@@ -328,6 +326,7 @@
     const subtotal = getCartTotal();
     const taxCalc = calculateBillWithTax(subtotal);
     
+    // Generate bill number starting from 0001
     const billNumber = getNextBillNumber();
     
     const orderData = {
@@ -354,15 +353,15 @@
       restaurantName: restaurantData?.name || 'QR Dine'
     };
     
-    console.log("📝 Placing order with Bill Number:", billNumber);
-    console.log("📝 Order Data:", orderData);
+    console.log("Placing order with Bill Number:", billNumber);
+    console.log("Order Data:", orderData);
     
     try {
       const docRef = await addDoc(collection(db, "orders"), { ...orderData, createdAt: serverTimestamp() });
       currentOrderId = docRef.id;
       currentOrder = { id: docRef.id, ...orderData };
       
-      console.log(`✅ Order placed successfully! ID: ${currentOrderId}, Bill #${billNumber}`);
+      console.log("Order placed with ID:", currentOrderId, "Bill Number:", currentOrder.billNumber);
       
       listenToOrderStatus(currentOrderId);
       
@@ -373,7 +372,7 @@
       render();
       return true;
     } catch (error) {
-      console.error("❌ Error placing order:", error);
+      console.error("Error placing order:", error);
       showToast('Failed to place order: ' + error.message, 'error');
       return false;
     }
@@ -391,10 +390,10 @@
         if (currentStep === 3) render();
         
         const messages = {
-          'Accepted': '✅ Order accepted by restaurant!',
-          'Preparing': '🍳 Your food is being prepared!',
-          'Ready': '🔔 Your order is ready for pickup!',
-          'Served': '🍽️ Enjoy your meal!'
+          'Accepted': 'Order accepted by restaurant!',
+          'Preparing': 'Your food is being prepared!',
+          'Ready': 'Your order is ready for pickup!',
+          'Served': 'Enjoy your meal!'
         };
         if (messages[updated.status]) showToast(messages[updated.status], 'info');
       }
@@ -533,6 +532,7 @@
     return `
       <div class="min-h-screen bg-gradient-to-b from-orange-50 to-white py-8 px-4">
         <div class="max-w-2xl mx-auto">
+          <!-- Order Status Tracker - TOP SECTION -->
           <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
             <h2 class="text-xl font-bold text-center text-gray-800 mb-6">Track Your Order</h2>
             <div class="relative">
@@ -550,13 +550,19 @@
               </div>
             </div>
             <div class="mt-6 text-center">
-              <p class="text-sm text-gray-500"><i class="fas fa-clock mr-1"></i> Estimated time: ${currentOrder.estimatedTime || 20} minutes</p>
-              <p class="text-xs text-green-600 mt-2"><i class="fas fa-check-circle"></i> Current Status: <span class="font-semibold">${currentOrder.status}</span></p>
+              <p class="text-sm text-gray-500">
+                <i class="fas fa-clock mr-1"></i> Estimated time: ${currentOrder.estimatedTime || 20} minutes
+              </p>
+              <p class="text-xs text-green-600 mt-2">
+                <i class="fas fa-check-circle"></i> Current Status: <span class="font-semibold">${currentOrder.status}</span>
+              </p>
             </div>
           </div>
           
+          <!-- Bill Summary - BOTTOM SECTION -->
           <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div class="p-6">
+              <!-- Restaurant Header -->
               <div class="text-center border-b pb-4 mb-4">
                 <h1 class="text-2xl font-bold text-gray-800">${restaurantData?.name || 'QR Dine'}</h1>
                 <p class="text-sm text-gray-500 mt-1">Digital Restaurant Bill</p>
@@ -568,6 +574,7 @@
                 </div>
               </div>
               
+              <!-- Order Items Table -->
               <div class="mb-4">
                 <table class="w-full text-sm">
                   <thead>
@@ -587,26 +594,49 @@
                         <td class="text-center py-2 px-2">${item.quantity}</td>
                         <td class="text-right py-2 px-2">${formatCurrency(item.price)}</td>
                         <td class="text-right py-2 px-2">${formatCurrency(item.price * item.quantity)}</td>
-                      </tr>
+                       </tr>
                     `).join('')}
                   </tbody>
                 </table>
               </div>
               
+              <!-- Bill Summary -->
               <div class="border-t pt-4 mt-2">
-                <div class="flex justify-between text-sm py-1"><span class="text-gray-600">Subtotal</span><span class="font-medium">${formatCurrency(currentOrder.subtotal)}</span></div>
-                <div class="flex justify-between text-sm py-1"><span class="text-gray-600">CGST (2.5%)</span><span class="font-medium">${formatCurrency(currentOrder.cgst)}</span></div>
-                <div class="flex justify-between text-sm py-1"><span class="text-gray-600">SGST (2.5%)</span><span class="font-medium">${formatCurrency(currentOrder.sgst)}</span></div>
-                <div class="flex justify-between text-sm py-1"><span class="text-gray-600">Service Charge (5%)</span><span class="font-medium">${formatCurrency(currentOrder.serviceCharge)}</span></div>
-                ${currentOrder.roundOff !== 0 ? `<div class="flex justify-between text-sm py-1"><span class="text-gray-600">Round Off</span><span class="font-medium">${currentOrder.roundOff > 0 ? '+' : ''}${formatCurrency(currentOrder.roundOff)}</span></div>` : ''}
-                <div class="flex justify-between text-base font-bold pt-2 mt-2 border-t"><span>Grand Total</span><span class="text-orange-600 text-lg">${formatCurrency(currentOrder.totalPrice)}</span></div>
+                <div class="flex justify-between text-sm py-1">
+                  <span class="text-gray-600">Subtotal</span>
+                  <span class="font-medium">${formatCurrency(currentOrder.subtotal)}</span>
+                </div>
+                <div class="flex justify-between text-sm py-1">
+                  <span class="text-gray-600">CGST (2.5%)</span>
+                  <span class="font-medium">${formatCurrency(currentOrder.cgst)}</span>
+                </div>
+                <div class="flex justify-between text-sm py-1">
+                  <span class="text-gray-600">SGST (2.5%)</span>
+                  <span class="font-medium">${formatCurrency(currentOrder.sgst)}</span>
+                </div>
+                <div class="flex justify-between text-sm py-1">
+                  <span class="text-gray-600">Service Charge (5%)</span>
+                  <span class="font-medium">${formatCurrency(currentOrder.serviceCharge)}</span>
+                </div>
+                ${currentOrder.roundOff !== 0 ? `
+                <div class="flex justify-between text-sm py-1">
+                  <span class="text-gray-600">Round Off</span>
+                  <span class="font-medium">${currentOrder.roundOff > 0 ? '+' : ''}${formatCurrency(currentOrder.roundOff)}</span>
+                </div>
+                ` : ''}
+                <div class="flex justify-between text-base font-bold pt-2 mt-2 border-t">
+                  <span>Grand Total</span>
+                  <span class="text-orange-600 text-lg">${formatCurrency(currentOrder.totalPrice)}</span>
+                </div>
               </div>
               
+              <!-- Payment Status -->
               <div class="mt-4 pt-3 border-t text-center">
                 <p class="text-sm font-medium text-green-600">Payment Status: Pending</p>
                 <p class="text-xs text-gray-400">Please pay at counter</p>
               </div>
               
+              <!-- Footer -->
               <div class="text-center text-xs text-gray-400 mt-6 pt-4 border-t">
                 <p>Thank you for dining with us!</p>
                 <p class="mt-1">Order ID: ${currentOrder.id.slice(-8)}</p>
@@ -615,6 +645,7 @@
             </div>
           </div>
           
+          <!-- Action Buttons -->
           <div class="flex gap-3 mt-6">
             <button id="newOrderBtn" class="flex-1 bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700 transition flex items-center justify-center gap-2">
               <i class="fas fa-plus"></i> New Order
