@@ -226,7 +226,7 @@
       snapshot.forEach((doc) => {
         orders.push({ id: doc.id, ...doc.data() });
       });
-      console.log(`✅ Owner: Loaded ${orders.length} orders for restaurant ${restaurantSettings.name}`);
+      console.log(`✅ Owner: Loaded ${orders.length} orders for restaurant`);
       if (currentView === 'orderhistory' || currentView === 'dashboard' || currentView === 'analytics') render();
     });
   }
@@ -441,6 +441,36 @@
     } catch (error) { showNotification("Error adding response", 'error'); }
   }
   
+  // ======================== ORDER ACTIONS ========================
+  async function updateOrderStatus(orderId, newStatus) {
+    try {
+      await updateDoc(doc(db, "orders", orderId), { status: newStatus, updatedAt: serverTimestamp() });
+      showNotification(`Order status updated to ${newStatus}`, 'success');
+      render();
+    } catch (error) {
+      showNotification("Error updating order", 'error');
+    }
+  }
+  
+  function printBill(order) {
+    const printWindow = window.open('', '_blank');
+    const orderDate = new Date(order.timestamp).toLocaleString();
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html><head><title>Bill #${order.billNumber}</title>
+      <style>body{font-family:monospace;padding:20px;max-width:400px;margin:0 auto;}</style>
+      </head><body>
+      <div style="text-align:center;"><h2>${restaurantSettings.name}</h2><p>${restaurantSettings.address}</p><hr></div>
+      <div><p><strong>Bill No:</strong> ${order.billNumber || '0001'}</p><p><strong>Table:</strong> ${order.tableNumber}</p><p><strong>Date:</strong> ${orderDate}</p></div>
+      <table style="width:100%; border-collapse:collapse;">${order.items?.map(item => `<tr><td style="padding:4px;">${item.name} x${item.quantity}</td><td style="text-align:right;">${formatCurrency(item.price * item.quantity)}</td></tr>`).join('')}</table>
+      <hr><div style="text-align:right;"><strong>Total: ${formatCurrency(order.totalPrice)}</strong></div>
+      <div style="text-align:center; margin-top:20px;"><p>Thank you! Visit Again</p></div>
+      <script>window.print();setTimeout(function(){window.close();},1000);<\/script>
+      </body></html>
+    `);
+    printWindow.document.close();
+  }
+  
   // ======================== AUTHENTICATION ========================
   async function login(email, password) {
     try {
@@ -498,10 +528,10 @@
   
   async function initializeDefaultData() {
     const defaultMenu = [
-      { name: "Paneer Tikka", price: 220, category: "Starters", description: "Grilled cottage cheese", veg: true, cost: 140, image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=80&h=80&fit=crop" },
-      { name: "Chicken Biryani", price: 320, category: "Main Course", description: "Fragrant basmati rice with chicken", veg: false, cost: 200, image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=80&h=80&fit=crop" },
-      { name: "Butter Naan", price: 45, category: "Breads", description: "Soft butter naan", veg: true, cost: 30, image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=80&h=80&fit=crop" },
-      { name: "Mango Lassi", price: 90, category: "Beverages", description: "Sweet mango yogurt drink", veg: true, cost: 55, image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=80&h=80&fit=crop" }
+      { name: "Paneer Tikka", price: 220, category: "Starters", description: "Grilled cottage cheese", veg: true, image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?w=80&h=80&fit=crop" },
+      { name: "Chicken Biryani", price: 320, category: "Main Course", description: "Fragrant basmati rice with chicken", veg: false, image: "https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?w=80&h=80&fit=crop" },
+      { name: "Butter Naan", price: 45, category: "Breads", description: "Soft butter naan", veg: true, image: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?w=80&h=80&fit=crop" },
+      { name: "Mango Lassi", price: 90, category: "Beverages", description: "Sweet mango yogurt drink", veg: true, image: "https://images.pexels.com/photos/302899/pexels-photo-302899.jpeg?w=80&h=80&fit=crop" }
     ];
     for (const item of defaultMenu) {
       await addDoc(collection(db, "menu"), { restaurantId: currentUser.uid, ...item, available: true, createdAt: serverTimestamp() });
@@ -672,7 +702,7 @@
   
   function renderOrders() {
     return `<div class="p-6"><div class="mb-6"><h1 class="text-2xl font-bold">Orders</h1><p class="text-gray-500">Manage and track customer orders</p></div>
-    <div class="space-y-4">${orders.length === 0 ? '<div class="bg-white rounded-xl p-12 text-center"><i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No orders yet. Orders will appear here when customers place them.</p></div>' : orders.map(order => `
+    <div class="space-y-4">${orders.length === 0 ? '<div class="bg-white rounded-xl p-12 text-center"><i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i><p class="text-gray-500">No orders yet. Orders will appear here when customers place them.</p><p class="text-sm text-orange-600 mt-2">QR Code URL: ?restaurant=${currentUser?.uid}&table=1</p></div>' : orders.map(order => `
       <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 ${order.status === 'Pending' ? 'border-yellow-400' : order.status === 'Preparing' ? 'border-blue-400' : 'border-green-400'}">
         <div class="flex justify-between items-start mb-3 flex-wrap gap-3">
           <div><h3 class="font-bold text-lg">Bill #${order.billNumber || '0001'}</h3><p class="text-sm text-gray-500">Table ${order.tableNumber} • ${new Date(order.timestamp).toLocaleString()}</p></div>
@@ -772,6 +802,14 @@
     document.querySelectorAll('.sidebar-nav').forEach(el => { el.addEventListener('click', () => { currentView = el.dataset.view; render(); }); });
     document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
+    
+    // Order action buttons
+    document.querySelectorAll('.acceptOrderBtn').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Accepted')));
+    document.querySelectorAll('.declineOrderBtn').forEach(btn => btn.addEventListener('click', () => { if(confirm('Decline this order?')) updateOrderStatus(btn.dataset.id, 'Declined'); }));
+    document.querySelectorAll('.prepareOrderBtn').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Preparing')));
+    document.querySelectorAll('.readyOrderBtn').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Ready')));
+    document.querySelectorAll('.serveOrderBtn').forEach(btn => btn.addEventListener('click', () => updateOrderStatus(btn.dataset.id, 'Served')));
+    document.querySelectorAll('.printOrderBtn').forEach(btn => btn.addEventListener('click', () => { const order = JSON.parse(btn.dataset.order); printBill(order); }));
   }
   
   function attachLoginEvents() {
@@ -844,19 +882,6 @@
     render();
   };
   window.closeModals = () => { showStaffModal = false; showInventoryModal = false; showMenuItemModal = false; editingStaff = null; editingInventory = null; editingMenuItem = null; selectedImageFile = null; imagePreviewUrl = null; render(); };
-  
-  // Order action handlers
-  window.acceptOrder = async (id) => { await updateDoc(doc(db, "orders", id), { status: 'Accepted' }); showNotification('Order accepted'); render(); };
-  window.declineOrder = async (id) => { if(confirm('Decline this order?')) await updateDoc(doc(db, "orders", id), { status: 'Declined' }); render(); };
-  window.prepareOrder = async (id) => { await updateDoc(doc(db, "orders", id), { status: 'Preparing' }); render(); };
-  window.readyOrder = async (id) => { await updateDoc(doc(db, "orders", id), { status: 'Ready' }); render(); };
-  window.serveOrder = async (id) => { await updateDoc(doc(db, "orders", id), { status: 'Served' }); render(); };
-  window.printBill = (order) => {
-    const printWindow = window.open('', '_blank');
-    const orderDate = new Date(order.timestamp).toLocaleString();
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>Bill #${order.billNumber}</title><style>body{font-family:monospace;padding:20px;}</style></head><body><div><h2>${restaurantSettings.name}</h2><p>Bill: ${order.billNumber} | Table: ${order.tableNumber}</p><p>Date: ${orderDate}</p><table border="1"><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>${order.items.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${formatCurrency(i.price)}</td><td>${formatCurrency(i.price * i.quantity)}</td></tr>`).join('')}</table><h3>Total: ${formatCurrency(order.totalPrice)}</h3><p>Thank you!</p></div><script>window.print();setTimeout(window.close,1000);<\/script></body></html>`);
-    printWindow.document.close();
-  };
   
   // Image upload handler
   document.addEventListener('change', (e) => {
